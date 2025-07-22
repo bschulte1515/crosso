@@ -52,11 +52,15 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../../builder.cpp \
+SOURCES       = ../../blackcell.cpp \
+		../../builder.cpp \
+		../../lettercell.cpp \
 		../../main.cpp \
 		../../mainwindow.cpp moc_builder.cpp \
 		moc_mainwindow.cpp
-OBJECTS       = builder.o \
+OBJECTS       = blackcell.o \
+		builder.o \
+		lettercell.o \
 		main.o \
 		mainwindow.o \
 		moc_builder.o \
@@ -337,8 +341,13 @@ DIST          = /usr/lib/qt6/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt6/mkspecs/features/exceptions.prf \
 		/usr/lib/qt6/mkspecs/features/yacc.prf \
 		/usr/lib/qt6/mkspecs/features/lex.prf \
-		../../../../crosso.pro ../../builder.h \
-		../../mainwindow.h ../../builder.cpp \
+		../../../../crosso.pro ../../blackcell.h \
+		../../builder.h \
+		../../cell.h \
+		../../lettercell.h \
+		../../mainwindow.h ../../blackcell.cpp \
+		../../builder.cpp \
+		../../lettercell.cpp \
 		../../main.cpp \
 		../../mainwindow.cpp
 QMAKE_TARGET  = crosso
@@ -928,8 +937,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/qt6/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../../builder.h ../../mainwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents ../../builder.cpp ../../main.cpp ../../mainwindow.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../../blackcell.h ../../builder.h ../../cell.h ../../lettercell.h ../../mainwindow.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../../blackcell.cpp ../../builder.cpp ../../lettercell.cpp ../../main.cpp ../../mainwindow.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents ../../mainwindow.ui $(DISTDIR)/
 
 
@@ -966,6 +975,7 @@ compiler_moc_header_make_all: moc_builder.cpp moc_mainwindow.cpp
 compiler_moc_header_clean:
 	-$(DEL_FILE) moc_builder.cpp moc_mainwindow.cpp
 moc_builder.cpp: ../../builder.h \
+		../../cell.h \
 		moc_predefs.h \
 		/usr/lib/qt6/moc
 	/usr/lib/qt6/moc $(DEFINES) --include /home/ben/Code/Projects/crosso/build/Desktop-Debug/moc_predefs.h -I/usr/lib/qt6/mkspecs/linux-g++ -I/home/ben/Code/Projects/crosso -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtCore -I. -I/usr/include/c++/15.1.1 -I/usr/include/c++/15.1.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.1.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/include-fixed -I/usr/include ../../builder.h -o moc_builder.cpp
@@ -996,15 +1006,26 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean compiler_ui
 
 ####### Compile
 
-builder.o: ../../builder.cpp ../../builder.h
+blackcell.o: ../../blackcell.cpp ../../blackcell.h \
+		../../cell.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o blackcell.o ../../blackcell.cpp
+
+builder.o: ../../builder.cpp ../../builder.h \
+		../../cell.h \
+		../../lettercell.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o builder.o ../../builder.cpp
 
-main.o: ../../main.cpp ../../mainwindow.h \
-		../../builder.h
+lettercell.o: ../../lettercell.cpp ../../lettercell.h \
+		../../cell.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o lettercell.o ../../lettercell.cpp
+
+main.o: ../../main.cpp ../../mainwindow.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../../main.cpp
 
 mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
-		ui_mainwindow.h
+		ui_mainwindow.h \
+		../../builder.h \
+		../../cell.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mainwindow.o ../../mainwindow.cpp
 
 moc_builder.o: moc_builder.cpp 
