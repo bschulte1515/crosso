@@ -10,15 +10,16 @@ CONFIG += c++17
 
 SOURCES += \
     blackcell.cpp \
-    builder.cpp \
+    grid.cpp \
     lettercell.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
     blackcell.h \
-    builder.h \
     cell.h \
+    editorstate.h \
+    grid.h \
     lettercell.h \
     mainwindow.h
 

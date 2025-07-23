@@ -53,17 +53,17 @@ OBJECTS_DIR   = ./
 ####### Files
 
 SOURCES       = ../../blackcell.cpp \
-		../../builder.cpp \
+		../../grid.cpp \
 		../../lettercell.cpp \
 		../../main.cpp \
-		../../mainwindow.cpp moc_builder.cpp \
+		../../mainwindow.cpp moc_grid.cpp \
 		moc_mainwindow.cpp
 OBJECTS       = blackcell.o \
-		builder.o \
+		grid.o \
 		lettercell.o \
 		main.o \
 		mainwindow.o \
-		moc_builder.o \
+		moc_grid.o \
 		moc_mainwindow.o
 DIST          = /usr/lib/qt6/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt6/mkspecs/common/unix.conf \
@@ -342,11 +342,12 @@ DIST          = /usr/lib/qt6/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt6/mkspecs/features/yacc.prf \
 		/usr/lib/qt6/mkspecs/features/lex.prf \
 		../../../../crosso.pro ../../blackcell.h \
-		../../builder.h \
 		../../cell.h \
+		../../editorstate.h \
+		../../grid.h \
 		../../lettercell.h \
 		../../mainwindow.h ../../blackcell.cpp \
-		../../builder.cpp \
+		../../grid.cpp \
 		../../lettercell.cpp \
 		../../main.cpp \
 		../../mainwindow.cpp
@@ -937,8 +938,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/qt6/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../../blackcell.h ../../builder.h ../../cell.h ../../lettercell.h ../../mainwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents ../../blackcell.cpp ../../builder.cpp ../../lettercell.cpp ../../main.cpp ../../mainwindow.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../../blackcell.h ../../cell.h ../../editorstate.h ../../grid.h ../../lettercell.h ../../mainwindow.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../../blackcell.cpp ../../grid.cpp ../../lettercell.cpp ../../main.cpp ../../mainwindow.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents ../../mainwindow.ui $(DISTDIR)/
 
 
@@ -971,14 +972,15 @@ compiler_moc_predefs_clean:
 moc_predefs.h: /usr/lib/qt6/mkspecs/features/data/dummy.cpp
 	g++ -pipe -g -std=gnu++1z -Wall -Wextra -dM -E -o moc_predefs.h /usr/lib/qt6/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all: moc_builder.cpp moc_mainwindow.cpp
+compiler_moc_header_make_all: moc_grid.cpp moc_mainwindow.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) moc_builder.cpp moc_mainwindow.cpp
-moc_builder.cpp: ../../builder.h \
+	-$(DEL_FILE) moc_grid.cpp moc_mainwindow.cpp
+moc_grid.cpp: ../../grid.h \
 		../../cell.h \
+		../../editorstate.h \
 		moc_predefs.h \
 		/usr/lib/qt6/moc
-	/usr/lib/qt6/moc $(DEFINES) --include /home/ben/Code/Projects/crosso/build/Desktop-Debug/moc_predefs.h -I/usr/lib/qt6/mkspecs/linux-g++ -I/home/ben/Code/Projects/crosso -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtCore -I. -I/usr/include/c++/15.1.1 -I/usr/include/c++/15.1.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.1.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/include-fixed -I/usr/include ../../builder.h -o moc_builder.cpp
+	/usr/lib/qt6/moc $(DEFINES) --include /home/ben/Code/Projects/crosso/build/Desktop-Debug/moc_predefs.h -I/usr/lib/qt6/mkspecs/linux-g++ -I/home/ben/Code/Projects/crosso -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtCore -I. -I/usr/include/c++/15.1.1 -I/usr/include/c++/15.1.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.1.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/include-fixed -I/usr/include ../../grid.h -o moc_grid.cpp
 
 moc_mainwindow.cpp: ../../mainwindow.h \
 		moc_predefs.h \
@@ -1010,10 +1012,12 @@ blackcell.o: ../../blackcell.cpp ../../blackcell.h \
 		../../cell.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o blackcell.o ../../blackcell.cpp
 
-builder.o: ../../builder.cpp ../../builder.h \
+grid.o: ../../grid.cpp ../../grid.h \
 		../../cell.h \
+		../../editorstate.h \
+		../../blackcell.h \
 		../../lettercell.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o builder.o ../../builder.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o grid.o ../../grid.cpp
 
 lettercell.o: ../../lettercell.cpp ../../lettercell.h \
 		../../cell.h
@@ -1024,12 +1028,13 @@ main.o: ../../main.cpp ../../mainwindow.h
 
 mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
 		ui_mainwindow.h \
-		../../builder.h \
-		../../cell.h
+		../../grid.h \
+		../../cell.h \
+		../../editorstate.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mainwindow.o ../../mainwindow.cpp
 
-moc_builder.o: moc_builder.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_builder.o moc_builder.cpp
+moc_grid.o: moc_grid.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_grid.o moc_grid.cpp
 
 moc_mainwindow.o: moc_mainwindow.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_mainwindow.o moc_mainwindow.cpp

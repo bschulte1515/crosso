@@ -1,9 +1,11 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "builder.h"
+#include "grid.h"
+#include "editorstate.h"
 
-const int GRID_SIZE = 16 ;
+const int GRID_SIZE = 16;
 const int CELL_SIZE = 30;
+const int BORDER_PX    = 20;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -11,10 +13,10 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    setFixedSize(GRID_SIZE * CELL_SIZE + 40, GRID_SIZE * CELL_SIZE + 40);
+    setFixedSize(GRID_SIZE * CELL_SIZE + BORDER_PX * 2, GRID_SIZE * CELL_SIZE + BORDER_PX * 2);
 
-    Builder *grid = new Builder(this, GRID_SIZE, CELL_SIZE);
-    grid->move(20, 20);
+    Grid *grid = new Grid(this, new EditorState(), GRID_SIZE, CELL_SIZE);
+    grid->move(BORDER_PX, BORDER_PX);
     grid->show();
 }
 
