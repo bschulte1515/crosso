@@ -11,6 +11,7 @@ public:
     virtual bool isBlack() override;
     bool isHighlighted() { return highlighted; }
     void setHighlight(bool newHighlighted) { highlighted = newHighlighted; }
+    QChar getLetter() { return letter; }
     void setLetter(QChar ch) { letter = ch; }
 
 private:

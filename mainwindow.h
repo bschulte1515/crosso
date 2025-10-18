@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "grid.h"
+#include "editorstate.h"
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
@@ -17,7 +19,12 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+private slots:
+    void on_gridResized();
+
 private:
     Ui::MainWindow *ui;
+    Grid *currentGrid;
+    EditorState *state;
 };
 #endif // MAINWINDOW_H
