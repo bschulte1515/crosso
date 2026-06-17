@@ -1,4 +1,5 @@
 #include "grid.h"
+#include "state.h"
 #include "blackcell.h"
 #include "lettercell.h"
 #include <QPainter>
@@ -8,21 +9,21 @@
 #include <QMessageBox>
 #include <iostream>
 
-Grid::Grid(QWidget *parent, EditorState *stateIn, int g, int c)
-    : QWidget{parent}, state(stateIn), gridSize(g), cellSize(c)
+Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
+    : QWidget{parent}, state(stateIn), size(g), cellSize(c)
 {
     // Add the width of the pen to the canvas size to fit in all the edges of the board
-    this->setFixedSize(gridSize * cellSize + PEN_WIDTH, gridSize * cellSize + PEN_WIDTH);
+    this->setFixedSize(size * cellSize + PEN_WIDTH, size * cellSize + PEN_WIDTH);
 
-    for (int i = 0; i < gridSize; i++) {
+    for (int i = 0; i < size; i++) {
         std::vector<Cell*> row;
-        for (int j = 0; j < gridSize; j++) {
+        for (int j = 0; j < size; j++) {
             row.push_back(new LetterCell(i, j, cellSize, ' '));
         }
         cells.push_back(row);
     }
 
-    selectedCell = cells[0][0];
+    state->setSelectedCell(getCells()[0][0]);
 
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
@@ -38,17 +39,17 @@ void Grid::destroyGrid()
     cells.clear();
 }
 
-Grid::Grid(QWidget *parent, EditorState *stateIn, QString grid, int g, int c)
-    : QWidget{parent}, state(stateIn), gridSize(g), cellSize(c)
+Grid::Grid(QWidget *parent, State *stateIn, QString grid, int g, int c)
+    : QWidget{parent}, state(stateIn), size(g), cellSize(c)
 
 {
-    this->setFixedSize(gridSize * cellSize + PEN_WIDTH, gridSize * cellSize + PEN_WIDTH);
+    this->setFixedSize(size * cellSize + PEN_WIDTH, size * cellSize + PEN_WIDTH);
 
-    if (grid.size() != gridSize * gridSize) return; // TODO: Throw error when num of characters doesn't match grid size
-    for (int i = 0; i < gridSize; i++) {
+    if (grid.size() != size * size) return; // TODO: Throw error when num of characters doesn't match grid size
+    for (int i = 0; i < size; i++) {
         std::vector<Cell*> row;
-        for (int j = 0; j < gridSize; j++) {
-            QChar ch = grid[(j*gridSize + i)];
+        for (int j = 0; j < size; j++) {
+            QChar ch = grid[(j*size + i)];
             if (ch == "#") {
                 row.push_back(new BlackCell(i, j, cellSize));
             } else {
@@ -59,7 +60,7 @@ Grid::Grid(QWidget *parent, EditorState *stateIn, QString grid, int g, int c)
         cells.push_back(row);
     }
 
-    selectedCell = cells[0][0];
+    state->setSelectedCell(cells[0][0]);
 
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
@@ -79,18 +80,18 @@ void Grid::paintEvent(QPaintEvent *event)
     pen.setCapStyle(Qt::SquareCap);
     painter.setPen(pen);
 
-    for (int row = 0; row <= gridSize; row++)
+    for (int row = 0; row <= size; row++)
     {
-        painter.drawLine(0, row * cellSize, gridSize * cellSize, row * cellSize);
+        painter.drawLine(0, row * cellSize, size * cellSize, row * cellSize);
     }
 
-    for (int col = 0; col <= gridSize; col++)
+    for (int col = 0; col <= size; col++)
     {
-        painter.drawLine(col * cellSize, 0, col * cellSize, gridSize * cellSize);
+        painter.drawLine(col * cellSize, 0, col * cellSize, size * cellSize);
     }
 
-    for (int i = 0; i < gridSize; ++i) {
-        for (int j = 0; j < gridSize; ++j) {
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
             cells[i][j]->draw(&painter);
         }
     }
@@ -108,9 +109,23 @@ void Grid::toggleCell(int x, int y)
 
 void Grid::switchEditingMode()
 {
-    state->switchEditingMode();
-    LetterCell *cell = dynamic_cast<LetterCell *>(selectedCell);
-    if (cell) { cell->setHighlight(false); }
+    switch(state->getEditingMode()) {
+    case LAYOUT: {
+        state->setEditingMode(FILL);
+        LetterCell *cell = dynamic_cast<LetterCell *>(state->getSelectedCell());
+        if (cell) { cell->setHighlight(true); }
+        break;
+    }
+    case FILL: {
+        LetterCell *cell = dynamic_cast<LetterCell *>(state->getSelectedCell());
+        if (cell) { cell->setHighlight(false); }
+        state->setEditingMode(LAYOUT);
+        break;
+    }
+    case CLUES:
+    default:
+        break;
+    }
 }
 
 void Grid::handleShortcut(QKeyEvent *event)
@@ -126,25 +141,10 @@ void Grid::handleShortcut(QKeyEvent *event)
             loadFromFile();
             break;
         case Qt::Key_D:
-            moveDirection = !moveDirection;
+            state->swapFillDirection();
             break;
         default:
             break;
-    }
-}
-
-void Grid::moveSelectedCell()
-{
-    int newX = selectedCell->getX() + !moveDirection;
-    int newY = selectedCell->getY() + moveDirection;
-    LetterCell *oldCell = dynamic_cast<LetterCell *>(cells[selectedCell->getX()][selectedCell->getY()]);
-
-    if ((moveDirection && newY < gridSize) || (!moveDirection && newX < gridSize)) {
-        LetterCell *newCell = dynamic_cast<LetterCell *>(cells[newX][newY]);
-        if (!oldCell || !newCell) return;
-        newCell->setHighlight(true);
-        oldCell->setHighlight(false);
-        selectedCell = cells[newX][newY];
     }
 }
 
@@ -153,81 +153,88 @@ void Grid::mousePressEvent(QMouseEvent *event)
     int x = event->position().x() / cellSize;
     int y = event->position().y() / cellSize;
 
-    if (state->isEditingGrid()) {
+    if (state->getEditingMode() == LAYOUT) {
         bool symmetricGrid = true;
 
         toggleCell(x, y);
 
         if (symmetricGrid) {
-            toggleCell(gridSize-x-1, gridSize-y-1);
+            toggleCell(size - x - 1, size - y - 1);
         }
 
 
     } else {
         // TODO: Maybe (looking at next TODO as well) add new function "updateSelectedCell"
-        LetterCell *oldCell = dynamic_cast<LetterCell *>(selectedCell);
+        LetterCell *oldCell = dynamic_cast<LetterCell *>(state->getSelectedCell());
         if (oldCell) { oldCell->setHighlight(false); }
 
         LetterCell *newCell = dynamic_cast<LetterCell *>(cells[x][y]);
-        if (newCell) { newCell->setHighlight(true); selectedCell = newCell; }
+        if (newCell) { newCell->setHighlight(true); state->setSelectedCell(newCell); }
     }
 
     update();
 }
 
+/**
+ * @brief Grid::keyPressEvent   Gets called when the grid is focused and a key is pressed.
+ * @param event                 The key press(es) that occured to trigger the event
+ */
 void Grid::keyPressEvent(QKeyEvent *event)
 {
     QString text = event->text();
 
+    // Process a shortcut
     if (event->modifiers() & Qt::ControlModifier) {
         handleShortcut(event);
+        goto exit;
     }
-
-    else if (!text.isEmpty() && !state->isEditingGrid()) {
+    // Process a key press when we are filling the grid
+    if (!text.isEmpty() && state->getEditingMode() == FILL) {
         QChar ch = text.at(0).toUpper();
         if (ch.isLetter()) {
-            LetterCell *cell = dynamic_cast<LetterCell *>(selectedCell);
+            LetterCell *cell = dynamic_cast<LetterCell *>(state->getSelectedCell());
             if (cell) {
                 cell->setLetter(ch);
             }
-            moveSelectedCell();
+            state->updateSelectedCell();
         }
     }
 
+exit:
     update();
 }
 
-QString Grid::gridToString()
+QString Grid::toString()
 {
-    QString gridAsString = "";
-    for (int i = 0; i < gridSize; i++) {
-        for (int j = 0; j < gridSize; j++) {
+    QString grid = "";
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
             if (cells[j][i]->isBlack()) {
-                gridAsString += "#";
+                grid += "#";
             } else {
                 LetterCell *cell = dynamic_cast<LetterCell *>(cells[j][i]);
-                if (!cell) return gridAsString; // TODO: Throw error that error parsing (shouldn't happen though)
+                if (!cell) return grid; // TODO: Throw error that error parsing (shouldn't happen though)
                 QChar letter = cell->getLetter();
                 if (letter == " ") letter = '_';
-                gridAsString += letter;
+                grid += letter;
             }
         }
     }
-    return gridAsString;
+    return grid;
 }
 
-void Grid::stringToGrid(QString newGrid, int newGridSize)
+void Grid::fromString(QString newGrid, int newSize)
 {
 
-    if (newGrid.size() != newGridSize * newGridSize) return; // TODO: Throw error when num of characters doesn't match grid size
+    if (newGrid.size() != newSize * newSize) return; // TODO: Throw error when num of characters doesn't match grid size
 
     destroyGrid();
-    gridSize = newGridSize;
+    size = newSize;
 
-    for (int i = 0; i < gridSize; i++) {
+    for (int i = 0; i < size; i++) {
         std::vector<Cell *> row;
-        for (int j = 0; j < gridSize; j++) {
-            QChar ch = newGrid[(j*gridSize + i)];
+        for (int j = 0; j < size; j++) {
+            QChar ch = newGrid[(j*size + i)];
             if (ch == "#") {
                 row.push_back(new BlackCell(i, j, cellSize));
             } else {
@@ -238,7 +245,7 @@ void Grid::stringToGrid(QString newGrid, int newGridSize)
         cells.push_back(row);
     }
 
-    this->setFixedSize(gridSize * cellSize + PEN_WIDTH, gridSize * cellSize + PEN_WIDTH);
+    this->setFixedSize(size * cellSize + PEN_WIDTH, size * cellSize + PEN_WIDTH);
     emit gridResized();
     update();
 }
@@ -261,8 +268,8 @@ void Grid::saveToFile()
     }
     setWindowTitle(state->getCurrentFile());
     QTextStream out(&file);
-    QString gridString = gridToString();
-    out << gridSize << ',' << gridString;
+    QString gridString = this->toString();
+    out << size << ',' << gridString;
     file.close();
 }
 
@@ -288,6 +295,6 @@ void Grid::loadFromFile()
     bool ok;
     int size = items[0].toInt(&ok);
     if (!ok) return;
-    stringToGrid(items[1], size);
-    selectedCell = cells[0][0];
+    this->fromString(items[1], size);
+    state->setSelectedCell(cells[0][0]);
 }

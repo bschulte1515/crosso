@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include "grid.h"
-#include "editorstate.h"
+#include "state.h"
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
@@ -24,7 +24,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    Grid *currentGrid;
-    EditorState *state;
+    Grid *grid;
+    State *state;
 };
 #endif // MAINWINDOW_H

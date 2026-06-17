@@ -7,6 +7,7 @@ class LetterCell : public Cell
 {
 public:
     LetterCell(int xIn, int yIn, int sizeIn, QChar letterIn);
+
     virtual void draw(QPainter *painter) override;
     virtual bool isBlack() override;
     bool isHighlighted() { return highlighted; }
@@ -18,7 +19,8 @@ private:
     QChar letter;
     bool highlighted;
 
-    static constexpr int LETTER_Y_OFFSET = 2; // Letters are placed slightly too high in cells so this is the offset
+    // Letters are placed slightly too high in cells so this is the offset
+    static constexpr int LETTER_Y_OFFSET = 2;
 };
 
 #endif // LETTERCELL_H

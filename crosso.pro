@@ -13,15 +13,16 @@ SOURCES += \
     grid.cpp \
     lettercell.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    state.cpp
 
 HEADERS += \
     blackcell.h \
     cell.h \
-    editorstate.h \
     grid.h \
     lettercell.h \
-    mainwindow.h
+    mainwindow.h \
+    state.h
 
 FORMS += \
     mainwindow.ui
