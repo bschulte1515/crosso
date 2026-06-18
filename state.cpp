@@ -2,22 +2,14 @@
 #include "state.h"
 #include "grid.h"
 
-void State::updateSelectedCell()
+void State::updateSelectedCell(int x, int y)
 {
-    int oldX = selectedCell->getX();
-    int oldY = selectedCell->getY();
-    int deltaX = (fillDirection == HORIZONTAL &&
-                  !(oldX == grid->getSize() - 1)) ? 1 : 0;
-    int deltaY = (fillDirection == VERTICAL &&
-                  !(oldY == grid->getSize() - 1)) ? 1 : 0;
-    int newX = oldX + deltaX;
-    int newY = oldY + deltaY;
-    LetterCell *oldCell = dynamic_cast<LetterCell *>(grid->getCells()[oldX][oldY]);
-    LetterCell *newCell = dynamic_cast<LetterCell *>(grid->getCells()[newX][newY]);
+    LetterCell *oldCell = dynamic_cast<LetterCell *>(selectedCell);
+    LetterCell *newCell = dynamic_cast<LetterCell *>(grid->getCells()[x][y]);
     if (!oldCell || !newCell) return;
     oldCell->setHighlight(false);
     newCell->setHighlight(true);
-    selectedCell = grid->getCells()[newX][newY];
+    selectedCell = newCell;
 }
 
 void State::swapFillDirection()

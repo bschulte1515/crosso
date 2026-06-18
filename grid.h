@@ -18,10 +18,11 @@ public:
     void mousePressEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
-    void toggleCell(int x, int y);
+    void updateSelectedCell(int x, int y);
+    void getNextCell(int *x, int *y);
+    void toggleCells(int x, int y, bool symmetric);
     void switchEditingMode();
     void handleShortcut(QKeyEvent *event);
-    void moveSelectedCell();
     QString toString();
     void fromString(QString newGrid, int newGridSize);
     void saveToFile();

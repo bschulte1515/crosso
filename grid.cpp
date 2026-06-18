@@ -97,13 +97,26 @@ void Grid::paintEvent(QPaintEvent *event)
     }
 }
 
-void Grid::toggleCell(int x, int y)
+void Grid::toggleCells(int x, int y, bool symmetric)
 {
     Cell *cell = cells[x][y];
     if (cell->isBlack()) {
-        cells[x][y] = new LetterCell(x, y, cellSize, ' ');
+        delete cell;
+        cell = new LetterCell(x, y, cellSize, ' ');
     } else {
-        cells[x][y] = new BlackCell(x, y, cellSize);
+        delete cell;
+        cell = new BlackCell(x, y, cellSize);
+    }
+    if (!symmetric) return;
+
+    // We want to make sure the cells are the exact same now
+    Cell *opposite_cell = cells[size-x-1][size-y-1];
+    if (cell->isBlack()) {
+        delete opposite_cell;
+        opposite_cell = new BlackCell(size-x-1, size-y-1, cellSize);
+    } else {
+        delete opposite_cell;
+        opposite_cell = new LetterCell(size-x-1, size-y-1, cellSize, ' ');
     }
 }
 
@@ -155,21 +168,9 @@ void Grid::mousePressEvent(QMouseEvent *event)
 
     if (state->getEditingMode() == LAYOUT) {
         bool symmetricGrid = true;
-
-        toggleCell(x, y);
-
-        if (symmetricGrid) {
-            toggleCell(size - x - 1, size - y - 1);
-        }
-
-
+        toggleCells(x, y, symmetricGrid);
     } else {
-        // TODO: Maybe (looking at next TODO as well) add new function "updateSelectedCell"
-        LetterCell *oldCell = dynamic_cast<LetterCell *>(state->getSelectedCell());
-        if (oldCell) { oldCell->setHighlight(false); }
-
-        LetterCell *newCell = dynamic_cast<LetterCell *>(cells[x][y]);
-        if (newCell) { newCell->setHighlight(true); state->setSelectedCell(newCell); }
+        updateSelectedCell(x, y);
     }
 
     update();
@@ -196,12 +197,45 @@ void Grid::keyPressEvent(QKeyEvent *event)
             if (cell) {
                 cell->setLetter(ch);
             }
-            state->updateSelectedCell();
+            int x = 0, y = 0;
+            getNextCell(&x, &y);
+            updateSelectedCell(x, y);
         }
     }
 
 exit:
     update();
+}
+
+void Grid::getNextCell(int *x, int *y)
+{
+    int oldX = state->getSelectedCell()->getX();
+    int oldY = state->getSelectedCell()->getY();
+    int deltaX = (state->getFillDirection() == HORIZONTAL &&
+                  !(oldX == getSize() - 1)) ? 1 : 0;
+    int deltaY = (state->getFillDirection() == VERTICAL &&
+                  !(oldY == getSize() - 1)) ? 1 : 0;
+    *x = oldX + deltaX;
+    *y = oldY + deltaY;
+}
+
+// TODO
+// void Grid::updateHighlighting(LetterCell *oldCell, LetterCell *newCell)
+// {
+    // oldCell->setHighlight(false);
+    // newCell->setHighlight(true);
+// }
+
+void Grid::updateSelectedCell(int x, int y)
+{
+    // It should only be possible to set the selected cell to a letter cell.
+    // Attempts to select a black cell with be ignored here.
+    LetterCell *oldCell = dynamic_cast<LetterCell *>(state->getSelectedCell());
+    LetterCell *newCell = dynamic_cast<LetterCell *>(cells[x][y]);
+    if (!oldCell | !newCell) return;
+    state->setSelectedCell(newCell);
+    oldCell->setHighlight(false);
+    newCell->setHighlight(true);
 }
 
 QString Grid::toString()
