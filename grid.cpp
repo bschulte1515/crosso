@@ -1,13 +1,12 @@
 #include "grid.h"
 #include "state.h"
-#include "blackcell.h"
 #include "lettercell.h"
+#include "blackcell.h"
 #include <QPainter>
 #include <QMouseEvent>
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <iostream>
 
 Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
     : QWidget{parent}, state(stateIn), size(g), cellSize(c)
@@ -22,8 +21,10 @@ Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
         }
         cells.push_back(row);
     }
-
-    state->setSelectedCell(getCells()[0][0]);
+    LetterCell *cell = dynamic_cast<LetterCell *>(cells[0][0]);
+    if (!cell) return;
+    state->setSelectedCell(cell);
+    cell->setSelected(true);
 
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
@@ -37,33 +38,6 @@ void Grid::destroyGrid()
         }
     }
     cells.clear();
-}
-
-Grid::Grid(QWidget *parent, State *stateIn, QString grid, int g, int c)
-    : QWidget{parent}, state(stateIn), size(g), cellSize(c)
-
-{
-    this->setFixedSize(size * cellSize + PEN_WIDTH, size * cellSize + PEN_WIDTH);
-
-    if (grid.size() != size * size) return; // TODO: Throw error when num of characters doesn't match grid size
-    for (int i = 0; i < size; i++) {
-        std::vector<Cell*> row;
-        for (int j = 0; j < size; j++) {
-            QChar ch = grid[(j*size + i)];
-            if (ch == "#") {
-                row.push_back(new BlackCell(i, j, cellSize));
-            } else {
-                if (ch == '_') ch = ' '; // Convert spaces
-                row.push_back(new LetterCell(i, j, cellSize, ch));
-            }
-        }
-        cells.push_back(row);
-    }
-
-    state->setSelectedCell(cells[0][0]);
-
-    setFocusPolicy(Qt::StrongFocus);
-    setFocus();
 }
 
 void Grid::paintEvent(QPaintEvent *event)
@@ -218,14 +192,47 @@ void Grid::getNextCell(int *x, int *y)
 
 // TODO Make this a more efficient/smarter process
 // Gets called on every *successful* update of the selected cell
-// void Grid::updateHighlighting(LetterCell *oldCell, LetterCell *newCell)
-// {
-//     // Remove the highlighting for the row/column of the new selected cell
+void Grid::updateHighlighting(LetterCell *oldCell)
+{
+    // Remove the highlighting for the row/column of the new selected cell
+    if (state->getFillDirection() == HORIZONTAL) {
+        for (int i = 0; i < size; i++) {
+            cells[oldCell->getX()][i]->setHighlight(false);
+        }
 
+        // Move c back to first cell to be highlighted
+        Cell *c = state->getSelectedCell();
+        while (!c->isBlack() && c->getY() != 0) {
+            c = cells[c->getX()][c->getY()-1];
+            c->setHighlight(true);
+        }
+        c = state->getSelectedCell();
+        while (!c->isBlack() && c->getY() != size - 1) {
+            c = cells[c->getX()][c->getY()+1];
+            c->setHighlight(true);
+        }
 
-//     oldCell->setHighlight(false);
-//     newCell->setHighlight(true);
-// }
+    }
+    else if (state->getFillDirection() == VERTICAL) {
+        for (int i = 0; i < size; i++) {
+            cells[i][oldCell->getY()]->setHighlight(false);
+        }
+
+        // Move c back to first cell to be highlighted
+        Cell *c = state->getSelectedCell();
+        while (!c->isBlack() && c->getX() != 0) {
+            c = cells[c->getX()-1][c->getY()];
+            c->setHighlight(true);
+        }
+        c = state->getSelectedCell();
+        while (!c->isBlack() && c->getY() != size - 1) {
+            c = cells[c->getX()+1][c->getY()];
+            c->setHighlight(true);
+        }
+    }
+
+    state->getSelectedCell()->setHighlight(true);
+}
 
 void Grid::updateSelectedCell(int x, int y)
 {
@@ -235,9 +242,9 @@ void Grid::updateSelectedCell(int x, int y)
     LetterCell *newCell = dynamic_cast<LetterCell *>(cells[x][y]);
     if (!oldCell | !newCell) return;
     state->setSelectedCell(newCell);
-
-    oldCell->setHighlight(false);
-    newCell->setHighlight(true);
+    oldCell->setSelected(false);
+    newCell->setSelected(true);
+    updateHighlighting(oldCell);
 }
 
 QString Grid::toString()
@@ -332,5 +339,11 @@ void Grid::loadFromFile()
     int size = items[0].toInt(&ok);
     if (!ok) return;
     this->fromString(items[1], size);
-    state->setSelectedCell(cells[0][0]);
+    // TODO: This will *BREAK* (selected cell could be null, which is not expected)
+    //		 Add a "getFirstLetterCell" that returns the upper-leftmost LetterCell
+    //		 Would also need to ensure that grid is not completely black (>= 1 letter)
+    LetterCell *cell = dynamic_cast<LetterCell *>(cells[0][0]);
+    if (!cell) return;
+    state->setSelectedCell(cell);
+    cell->setSelected(true);
 }

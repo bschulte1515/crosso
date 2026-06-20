@@ -20,6 +20,12 @@ void LetterCell::draw(QPainter *painter)
         QColor highlightColor(0, 100, 255, 40);
         painter->fillRect(x * size, y * size, size, size, highlightColor);
     }
+    if (selected) {
+        QColor selectedColor(0, 50, 255, 50);
+        painter->fillRect(x * size, y * size, size, size, selectedColor);
+    }
 }
 
 bool LetterCell::isBlack() { return false; }
+
+void LetterCell::setHighlight(bool newHighlighted) { highlighted = newHighlighted; }
