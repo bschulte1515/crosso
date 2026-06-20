@@ -99,24 +99,21 @@ void Grid::paintEvent(QPaintEvent *event)
 
 void Grid::toggleCells(int x, int y, bool symmetric)
 {
-    Cell *cell = cells[x][y];
-    if (cell->isBlack()) {
-        delete cell;
-        cell = new LetterCell(x, y, cellSize, ' ');
+    bool wasBlack = cells[x][y]->isBlack();
+
+    delete cells[x][y];
+    if (wasBlack) {
+        cells[x][y] = new LetterCell(x, y, cellSize, ' ');
     } else {
-        delete cell;
-        cell = new BlackCell(x, y, cellSize);
+        cells[x][y] = new BlackCell(x, y, cellSize);
     }
     if (!symmetric) return;
 
-    // We want to make sure the cells are the exact same now
-    Cell *opposite_cell = cells[size-x-1][size-y-1];
-    if (cell->isBlack()) {
-        delete opposite_cell;
-        opposite_cell = new BlackCell(size-x-1, size-y-1, cellSize);
+    delete cells[size-x-1][size-y-1];
+    if (wasBlack) {
+        cells[size-x-1][size-y-1] = new LetterCell(size-x-1, size-y-1, cellSize, ' ');
     } else {
-        delete opposite_cell;
-        opposite_cell = new LetterCell(size-x-1, size-y-1, cellSize, ' ');
+        cells[size-x-1][size-y-1] = new BlackCell(size-x-1, size-y-1, cellSize);
     }
 }
 
@@ -219,11 +216,15 @@ void Grid::getNextCell(int *x, int *y)
     *y = oldY + deltaY;
 }
 
-// TODO
+// TODO Make this a more efficient/smarter process
+// Gets called on every *successful* update of the selected cell
 // void Grid::updateHighlighting(LetterCell *oldCell, LetterCell *newCell)
 // {
-    // oldCell->setHighlight(false);
-    // newCell->setHighlight(true);
+//     // Remove the highlighting for the row/column of the new selected cell
+
+
+//     oldCell->setHighlight(false);
+//     newCell->setHighlight(true);
 // }
 
 void Grid::updateSelectedCell(int x, int y)
@@ -234,6 +235,7 @@ void Grid::updateSelectedCell(int x, int y)
     LetterCell *newCell = dynamic_cast<LetterCell *>(cells[x][y]);
     if (!oldCell | !newCell) return;
     state->setSelectedCell(newCell);
+
     oldCell->setHighlight(false);
     newCell->setHighlight(true);
 }
