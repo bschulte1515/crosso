@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <iostream>
 
 Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
     : QWidget{parent}, state(stateIn), size(g), cellSize(c)
@@ -22,9 +23,8 @@ Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
         cells.push_back(row);
     }
     LetterCell *cell = dynamic_cast<LetterCell *>(cells[0][0]);
-    if (!cell) return;
+    assert(cell != NULL);
     state->setSelectedCell(cell);
-    cell->setSelected(true);
 
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
@@ -77,7 +77,7 @@ void Grid::toggleCells(int x, int y, bool symmetric)
 
     delete cells[x][y];
     if (wasBlack) {
-        cells[x][y] = new LetterCell(x, y, cellSize, ' ');
+        cells[x][y] = new LetterCell(x, y, cellSize);
     } else {
         cells[x][y] = new BlackCell(x, y, cellSize);
     }
@@ -85,7 +85,7 @@ void Grid::toggleCells(int x, int y, bool symmetric)
 
     delete cells[size-x-1][size-y-1];
     if (wasBlack) {
-        cells[size-x-1][size-y-1] = new LetterCell(size-x-1, size-y-1, cellSize, ' ');
+        cells[size-x-1][size-y-1] = new LetterCell(size-x-1, size-y-1, cellSize);
     } else {
         cells[size-x-1][size-y-1] = new BlackCell(size-x-1, size-y-1, cellSize);
     }
@@ -96,14 +96,12 @@ void Grid::switchEditingMode()
     switch(state->getEditingMode()) {
     case LAYOUT: {
         state->setEditingMode(FILL);
-        LetterCell *cell = dynamic_cast<LetterCell *>(state->getSelectedCell());
-        if (cell) { cell->setHighlight(true); }
+        addHighlighting();
         break;
     }
     case FILL: {
-        LetterCell *cell = dynamic_cast<LetterCell *>(state->getSelectedCell());
-        if (cell) { cell->setHighlight(false); }
         state->setEditingMode(LAYOUT);
+        removeHighlighting();
         break;
     }
     case CLUES:
@@ -190,36 +188,10 @@ void Grid::getNextCell(int *x, int *y)
     *y = oldY + deltaY;
 }
 
-// TODO Make this a more efficient/smarter process
-// Gets called on every *successful* update of the selected cell
-void Grid::updateHighlighting(LetterCell *oldCell)
+void Grid::addHighlighting()
 {
-    // Remove the highlighting for the row/column of the new selected cell
+    Cell *c = state->getSelectedCell();
     if (state->getFillDirection() == HORIZONTAL) {
-        for (int i = 0; i < size; i++) {
-            cells[oldCell->getX()][i]->setHighlight(false);
-        }
-
-        // Move c back to first cell to be highlighted
-        Cell *c = state->getSelectedCell();
-        while (!c->isBlack() && c->getY() != 0) {
-            c = cells[c->getX()][c->getY()-1];
-            c->setHighlight(true);
-        }
-        c = state->getSelectedCell();
-        while (!c->isBlack() && c->getY() != size - 1) {
-            c = cells[c->getX()][c->getY()+1];
-            c->setHighlight(true);
-        }
-
-    }
-    else if (state->getFillDirection() == VERTICAL) {
-        for (int i = 0; i < size; i++) {
-            cells[i][oldCell->getY()]->setHighlight(false);
-        }
-
-        // Move c back to first cell to be highlighted
-        Cell *c = state->getSelectedCell();
         while (!c->isBlack() && c->getX() != 0) {
             c = cells[c->getX()-1][c->getY()];
             c->setHighlight(true);
@@ -230,8 +202,33 @@ void Grid::updateHighlighting(LetterCell *oldCell)
             c->setHighlight(true);
         }
     }
+    else if (state->getFillDirection() == VERTICAL) {
+        while (!c->isBlack() && c->getY() != 0) {
+            c = cells[c->getX()][c->getY()-1];
+            c->setHighlight(true);
+        }
+        c = state->getSelectedCell();
+        while (!c->isBlack() && c->getY() != size - 1) {
+            c = cells[c->getX()][c->getY()+1];
+            c->setHighlight(true);
+        }
+    }
+}
 
-    state->getSelectedCell()->setHighlight(true);
+void Grid::removeHighlighting(LetterCell *cell)
+{
+    // Remove the highlighting for the row/column of the new selected cell
+    if (state->getFillDirection() == HORIZONTAL) {
+        for (int i = 0; i < size; i++) {
+            cells[i][cell->getY()]->setHighlight(false);
+        }
+    }
+    else if (state->getFillDirection() == VERTICAL) {
+        for (int i = 0; i < size; i++) {
+            cells[cell->getX()][i]->setHighlight(false);
+        }
+    }
+    cell->setSelected(false);
 }
 
 void Grid::updateSelectedCell(int x, int y)
@@ -242,9 +239,8 @@ void Grid::updateSelectedCell(int x, int y)
     LetterCell *newCell = dynamic_cast<LetterCell *>(cells[x][y]);
     if (!oldCell | !newCell) return;
     state->setSelectedCell(newCell);
-    oldCell->setSelected(false);
-    newCell->setSelected(true);
-    updateHighlighting(oldCell);
+    removeHighlighting(oldCell);
+    addHighlighting();
 }
 
 QString Grid::toString()
@@ -256,7 +252,7 @@ QString Grid::toString()
                 grid += "#";
             } else {
                 LetterCell *cell = dynamic_cast<LetterCell *>(cells[j][i]);
-                if (!cell) return grid; // TODO: Throw error that error parsing (shouldn't happen though)
+                assert(cell != NULL);
                 QChar letter = cell->getLetter();
                 if (letter == " ") letter = '_';
                 grid += letter;
@@ -281,7 +277,6 @@ void Grid::fromString(QString newGrid, int newSize)
             if (ch == "#") {
                 row.push_back(new BlackCell(i, j, cellSize));
             } else {
-                if (ch == '_') ch = ' '; // Convert spaces
                 row.push_back(new LetterCell(i, j, cellSize, ch));
             }
         }
@@ -345,5 +340,39 @@ void Grid::loadFromFile()
     LetterCell *cell = dynamic_cast<LetterCell *>(cells[0][0]);
     if (!cell) return;
     state->setSelectedCell(cell);
-    cell->setSelected(true);
+}
+
+void Grid::updateRows()
+{
+    for (int x = 0; x < size; x ++) {
+        bool insideRow = false;
+        int rowStart = -1;
+        for (int y = 0; y < size; y ++) {
+            // If we hit a black cell and we were inside a row,
+            // save this off as a row
+            if (c->isBlack() && insideRow) {
+
+            }
+            // If we hit a black cell and we were not inside a row,
+            // (i.e. previous cell was a letter or this is the first black cell,
+            else if (c->isBlack() && !insideRow) {
+                continue;
+            }
+            else if (!c->isBlack() && insideRow) {
+
+            }
+            else if (!c->isBlack() && insideRow) {
+
+            }
+        }
+    }
+}
+
+void Grid::updateCols()
+{
+    for (auto &cellRow : cells) {
+        for (auto *c: cellRow) {
+            delete c;
+        }
+    }
 }

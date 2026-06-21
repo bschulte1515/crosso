@@ -1,6 +1,7 @@
 #include "lettercell.h"
 
-LetterCell::LetterCell(int inX, int inY, int inSize, QChar letterIn) : Cell(inX, inY, inSize), letter(letterIn), highlighted(false) {}
+LetterCell::LetterCell(int inX, int inY, int inSize) : Cell(inX, inY, inSize) {}
+LetterCell::LetterCell(int inX, int inY, int inSize, QChar letterIn) : Cell(inX, inY, inSize), letter(letterIn) {}
 
 void LetterCell::draw(QPainter *painter)
 {
