@@ -4,6 +4,7 @@
 #include <vector>
 #include <QWidget>
 #include "cell.h"
+#include "lettercell.h"
 
 class State;
 
@@ -12,16 +13,18 @@ class Grid : public QWidget
     Q_OBJECT
 public:
     explicit Grid(QWidget *parent = nullptr, State *stateIn = nullptr, int g = 15, int c = 30);
-    explicit Grid(QWidget *parent = nullptr, State *stateIn = nullptr, QString grid = "", int g = 15, int c = 30);
+    // explicit Grid(QWidget *parent = nullptr, State *stateIn = nullptr, QString grid = "", int g = 15, int c = 30);
 
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
-    void toggleCell(int x, int y);
+    void getNextCell(int *x, int *y);
+    void updateHighlighting(LetterCell *oldCell);
+    void updateSelectedCell(int x, int y);
+    void toggleCells(int x, int y, bool symmetric);
     void switchEditingMode();
     void handleShortcut(QKeyEvent *event);
-    void moveSelectedCell();
     QString toString();
     void fromString(QString newGrid, int newGridSize);
     void saveToFile();

@@ -3,7 +3,7 @@
 
 #include <QString>
 
-#include "cell.h"
+#include "lettercell.h"
 
 class Grid;
 
@@ -25,15 +25,15 @@ public:
 
     void setGrid(Grid *newGrid) { grid = newGrid; }
     Grid *getGrid() { return grid; }
-    void setSelectedCell(Cell *cell) { selectedCell = cell; }
-    Cell *getSelectedCell() { return selectedCell; }
+    void setSelectedCell(LetterCell *cell) { selectedCell = cell; }
+    LetterCell *getSelectedCell() { return selectedCell; }
     Direction getFillDirection() { return fillDirection; }
     void setEditingMode(EditingMode mode) { editingMode = mode; }
     EditingMode getEditingMode() { return editingMode; }
     void setCurrentFile(QString filename) { currentFile = filename; }
     QString getCurrentFile() { return currentFile; }
 
-    void updateSelectedCell();
+    void updateSelectedCell(int x, int y);
     void swapFillDirection();
 
 private:
@@ -41,7 +41,7 @@ private:
     Grid *grid;
 
     /* Paramters for editing answers */
-    Cell *selectedCell; // Cell currently highlighted when not in grid edit mode
+    LetterCell *selectedCell; // Cell currently highlighted when not in grid edit mode
     Direction fillDirection = HORIZONTAL; // Direction of highlighting/moving
 
     /* Parameters for editing grid */
