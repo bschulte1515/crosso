@@ -180,9 +180,9 @@ void Grid::getNextCell(int *x, int *y)
 {
     int oldX = state->getSelectedCell()->getX();
     int oldY = state->getSelectedCell()->getY();
-    int deltaX = (state->getFillDirection() == HORIZONTAL &&
+    int deltaX = (state->getFillDirection() == ACROSS &&
                   !(oldX == getSize() - 1)) ? 1 : 0;
-    int deltaY = (state->getFillDirection() == VERTICAL &&
+    int deltaY = (state->getFillDirection() == DOWN &&
                   !(oldY == getSize() - 1)) ? 1 : 0;
     *x = oldX + deltaX;
     *y = oldY + deltaY;
@@ -190,45 +190,47 @@ void Grid::getNextCell(int *x, int *y)
 
 void Grid::addHighlighting()
 {
-    Cell *c = state->getSelectedCell();
-    if (state->getFillDirection() == HORIZONTAL) {
-        while (!c->isBlack() && c->getX() != 0) {
-            c = cells[c->getX()-1][c->getY()];
-            c->setHighlight(true);
-        }
-        c = state->getSelectedCell();
-        while (!c->isBlack() && c->getY() != size - 1) {
-            c = cells[c->getX()+1][c->getY()];
-            c->setHighlight(true);
-        }
-    }
-    else if (state->getFillDirection() == VERTICAL) {
-        while (!c->isBlack() && c->getY() != 0) {
-            c = cells[c->getX()][c->getY()-1];
-            c->setHighlight(true);
-        }
-        c = state->getSelectedCell();
-        while (!c->isBlack() && c->getY() != size - 1) {
-            c = cells[c->getX()][c->getY()+1];
-            c->setHighlight(true);
-        }
-    }
+    // Cell *c = state->getSelectedCell();
+    // if (state->getFillDirection() == ACROSS) {
+    //     while (!c->isBlack() && c->getX() != 0) {
+    //         c = cells[c->getX()-1][c->getY()];
+    //         c->setHighlight(true);
+    //     }
+    //     c = state->getSelectedCell();
+    //     while (!c->isBlack() && c->getY() != size - 1) {
+    //         c = cells[c->getX()+1][c->getY()];
+    //         c->setHighlight(true);
+    //     }
+    // }
+    // else if (state->getFillDirection() == DOWN) {
+    //     while (!c->isBlack() && c->getY() != 0) {
+    //         c = cells[c->getX()][c->getY()-1];
+    //         c->setHighlight(true);
+    //     }
+    //     c = state->getSelectedCell();
+    //     while (!c->isBlack() && c->getY() != size - 1) {
+    //         c = cells[c->getX()][c->getY()+1];
+    //         c->setHighlight(true);
+    //     }
+    // }
+    ;
 }
 
 void Grid::removeHighlighting(LetterCell *cell)
 {
     // Remove the highlighting for the row/column of the new selected cell
-    if (state->getFillDirection() == HORIZONTAL) {
-        for (int i = 0; i < size; i++) {
-            cells[i][cell->getY()]->setHighlight(false);
-        }
-    }
-    else if (state->getFillDirection() == VERTICAL) {
-        for (int i = 0; i < size; i++) {
-            cells[cell->getX()][i]->setHighlight(false);
-        }
-    }
-    cell->setSelected(false);
+    // if (state->getFillDirection() == ACROSS) {
+    //     for (int i = 0; i < size; i++) {
+    //         cells[i][cell->getY()]->setHighlight(false);
+    //     }
+    // }
+    // else if (state->getFillDirection() == DOWN) {
+    //     for (int i = 0; i < size; i++) {
+    //         cells[cell->getX()][i]->setHighlight(false);
+    //     }
+    // }
+    // cell->setSelected(false);
+    ;
 }
 
 void Grid::updateSelectedCell(int x, int y)
@@ -342,37 +344,56 @@ void Grid::loadFromFile()
     state->setSelectedCell(cell);
 }
 
-void Grid::updateRows()
+/**
+ * @brief Grid::startsWord		Helper function that checks if this cell should be the start of a word
+ * @param cell 					The cell to check
+ * @param direction 			The direction to check
+ * @return						Whether the cell is the start of a word in the direction given
+ */
+bool Grid::startsWord(Cell *cell, Direction direction)
 {
-    for (int x = 0; x < size; x ++) {
-        bool insideRow = false;
-        int rowStart = -1;
-        for (int y = 0; y < size; y ++) {
-            // If we hit a black cell and we were inside a row,
-            // save this off as a row
-            if (c->isBlack() && insideRow) {
-
-            }
-            // If we hit a black cell and we were not inside a row,
-            // (i.e. previous cell was a letter or this is the first black cell,
-            else if (c->isBlack() && !insideRow) {
-                continue;
-            }
-            else if (!c->isBlack() && insideRow) {
-
-            }
-            else if (!c->isBlack() && insideRow) {
-
-            }
-        }
+    if (direction == ACROSS) {
+        if (cell->getX() == 0) return true;
+        Cell *cellLeft = cells[cell->getX()-1][cell->getY()];
+        if (cellLeft->isBlack()) return true;
     }
+    else if (direction == DOWN) {
+        if (cell->getY() == 0) return true;
+        Cell *cellAbove = cells[cell->getX()][cell->getY()-1];
+        if (cellAbove->isBlack()) return true;
+    }
+    return false;
 }
 
-void Grid::updateCols()
+/**
+ * @brief Grid::parseWord		Parses the word starting with @ref cell
+ * 								@note Assumes that this Cell is the start of the word
+ * @param cell
+ * @param direction
+ * @return
+ */
+word Grid::parseWord(Cell *cell, Direction direction)
 {
-    for (auto &cellRow : cells) {
-        for (auto *c: cellRow) {
-            delete c;
+
+}
+
+/**
+ * @brief Grid::updateWords      Parses the grid into words, first across then down
+ *
+ * Called everytime there is an update to the grid. For right now this should only be when switching
+ * from LAYOUT -> FILL mode, or after initalizing the grid (regularly or fromString)
+ */
+void Grid::updateWords()
+{
+    words.clear();
+    for (auto &row : cells) {
+        for (auto *cell: row) {
+            if (startsWord(cell, ACROSS)) {
+                words.push_back(parseWord(cell, ACROSS));
+            }
+            if (startsWord(cell, DOWN)) {
+                words.push_back(parseWord(cell, DOWN));
+            }
         }
     }
 }

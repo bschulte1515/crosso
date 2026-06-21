@@ -5,8 +5,19 @@
 #include <QWidget>
 #include "cell.h"
 #include "lettercell.h"
+#include "direction.h"
 
 class State;
+
+typedef struct _word {
+    int startX;
+    int startY;
+    int length;
+    Direction direction;
+    // TODO
+    // int clueNumber;
+    // QString clue;
+} word;
 
 class Grid : public QWidget
 {
@@ -35,8 +46,9 @@ public:
     void setSize(int newSize) { size = newSize; }
     auto& getCells() { return cells; }
 
-    void updateRows();
-    void updateCols();
+    bool startsWord(Cell *cell, Direction direction);
+    word parseWord(Cell *cell, Direction direction);
+    void updateWords();
 
     void destroyGrid();
 
@@ -50,11 +62,7 @@ private:
     int size;
     int cellSize;
     std::vector<std::vector<Cell *>> cells;
-
-    // Each row/col is represented as a pair of coordinate points
-    // (1, 0), (5, 0) would be a row of length 5, for example
-    std::vector<std::pair<std::pair<int, int>, std::pair<int, int>>> rows;
-    std::vector<std::pair<std::pair<int, int>, std::pair<int, int>>> cols;
+    std::vector<word> words;
 
     static constexpr int PEN_WIDTH = 1;
 };
