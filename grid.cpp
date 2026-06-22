@@ -22,9 +22,7 @@ Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
         }
         cells.push_back(row);
     }
-    LetterCell *cell = dynamic_cast<LetterCell *>(cells[0][0]);
-    assert(cell != NULL);
-    state->setSelectedCell(cell);
+    resetGrid();
 
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
@@ -38,6 +36,14 @@ void Grid::destroyGrid()
         }
     }
     cells.clear();
+}
+
+void Grid::resetGrid()
+{
+    updateWords();
+    LetterCell *firstLetter = getFirstLetter();
+    assert(firstLetter != NULL);
+    state->setSelectedCell(firstLetter);
 }
 
 void Grid::paintEvent(QPaintEvent *event)
@@ -166,9 +172,8 @@ void Grid::keyPressEvent(QKeyEvent *event)
             if (cell) {
                 cell->setLetter(ch);
             }
-            int x = 0, y = 0;
-            getNextCell(&x, &y);
-            updateSelectedCell(x, y);
+            Cell *next = getNextCell(state->getSelectedCell(), state->getFillDirection());
+            if (next) updateSelectedCell(next->getX(), next->getY());
         }
     }
 
@@ -176,16 +181,31 @@ exit:
     update();
 }
 
-void Grid::getNextCell(int *x, int *y)
+LetterCell *Grid::getFirstLetter()
 {
-    int oldX = state->getSelectedCell()->getX();
-    int oldY = state->getSelectedCell()->getY();
-    int deltaX = (state->getFillDirection() == ACROSS &&
-                  !(oldX == getSize() - 1)) ? 1 : 0;
-    int deltaY = (state->getFillDirection() == DOWN &&
-                  !(oldY == getSize() - 1)) ? 1 : 0;
-    *x = oldX + deltaX;
-    *y = oldY + deltaY;
+    if (words.empty()) return NULL;
+    struct Word firstWord = words[0];
+    Cell *firstCell = cells[firstWord.startX][firstWord.startY];
+    return dynamic_cast<LetterCell *>(firstCell);
+}
+
+/**
+ * @brief Grid::getNextCell      Returns a pointer to the "next" cell
+ * The next cell will either be the cell directly right or down, based on direction
+ * @param cell					 The cell to start at
+ * @param direction				 The direction in which to traverse the cells
+ * @return 						 The next cell. Set to NULL if traversing would lead to OOB
+ */
+Cell *Grid::getNextCell(Cell *cell, Direction direction)
+{
+    int oldX = cell->getX();
+    int oldY = cell->getY();
+    int deltaX = (direction == ACROSS &&
+                  !(oldX == size - 1)) ? 1 : 0;
+    int deltaY = (direction == DOWN &&
+                  !(oldY == size - 1)) ? 1 : 0;
+    if (deltaX == 0 && deltaY == 0) return NULL;
+    return cells[oldX + deltaX][oldY + deltaY];
 }
 
 void Grid::addHighlighting()
@@ -336,12 +356,7 @@ void Grid::loadFromFile()
     int size = items[0].toInt(&ok);
     if (!ok) return;
     this->fromString(items[1], size);
-    // TODO: This will *BREAK* (selected cell could be null, which is not expected)
-    //		 Add a "getFirstLetterCell" that returns the upper-leftmost LetterCell
-    //		 Would also need to ensure that grid is not completely black (>= 1 letter)
-    LetterCell *cell = dynamic_cast<LetterCell *>(cells[0][0]);
-    if (!cell) return;
-    state->setSelectedCell(cell);
+    resetGrid();
 }
 
 /**
@@ -372,9 +387,21 @@ bool Grid::startsWord(Cell *cell, Direction direction)
  * @param direction
  * @return
  */
-word Grid::parseWord(Cell *cell, Direction direction)
+struct Word Grid::parseWord(Cell *cell, Direction direction)
 {
-
+    struct Word newWord = {
+        .startX = cell->getX(),
+        .startY = cell->getY(),
+        .length = 0,
+        .direction = direction
+    };
+    for (Cell *next = cell;
+         next != NULL;
+         next = getNextCell(next, direction))
+    {
+        newWord.length++;
+    }
+    return newWord;
 }
 
 /**

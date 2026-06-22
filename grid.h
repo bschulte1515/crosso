@@ -9,7 +9,7 @@
 
 class State;
 
-typedef struct _word {
+struct Word {
     int startX;
     int startY;
     int length;
@@ -17,7 +17,7 @@ typedef struct _word {
     // TODO
     // int clueNumber;
     // QString clue;
-} word;
+};
 
 class Grid : public QWidget
 {
@@ -25,11 +25,15 @@ class Grid : public QWidget
 public:
     explicit Grid(QWidget *parent = nullptr, State *stateIn = nullptr, int g = 15, int c = 30);
 
+    void resetGrid();
+    void destroyGrid();
+
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
-    void getNextCell(int *x, int *y);
+    LetterCell *getFirstLetter();
+    Cell *getNextCell(Cell *cell, Direction direction);
     void addHighlighting();
     void removeHighlighting(LetterCell *cell);
     void updateHighlighting(LetterCell *oldCell);
@@ -47,10 +51,8 @@ public:
     auto& getCells() { return cells; }
 
     bool startsWord(Cell *cell, Direction direction);
-    word parseWord(Cell *cell, Direction direction);
+    struct Word parseWord(Cell *cell, Direction direction);
     void updateWords();
-
-    void destroyGrid();
 
 signals:
     void gridResized();
@@ -62,7 +64,7 @@ private:
     int size;
     int cellSize;
     std::vector<std::vector<Cell *>> cells;
-    std::vector<word> words;
+    std::vector<struct Word> words;
 
     static constexpr int PEN_WIDTH = 1;
 };
