@@ -29,7 +29,6 @@ public:
     void setCurrentFile(QString filename) { currentFile = filename; }
     QString getCurrentFile() { return currentFile; }
 
-    void updateSelectedCell(int x, int y);
     void swapFillDirection();
 
 private:

@@ -102,12 +102,13 @@ void Grid::switchEditingMode()
     switch(state->getEditingMode()) {
     case LAYOUT: {
         state->setEditingMode(FILL);
+        resetGrid();
         addHighlighting();
         break;
     }
     case FILL: {
         state->setEditingMode(LAYOUT);
-        removeHighlighting();
+        removeHighlighting(state->getSelectedCell());
         break;
     }
     case CLUES:
@@ -210,47 +211,53 @@ Cell *Grid::getNextCell(Cell *cell, Direction direction)
 
 void Grid::addHighlighting()
 {
-    // Cell *c = state->getSelectedCell();
-    // if (state->getFillDirection() == ACROSS) {
-    //     while (!c->isBlack() && c->getX() != 0) {
-    //         c = cells[c->getX()-1][c->getY()];
-    //         c->setHighlight(true);
-    //     }
-    //     c = state->getSelectedCell();
-    //     while (!c->isBlack() && c->getY() != size - 1) {
-    //         c = cells[c->getX()+1][c->getY()];
-    //         c->setHighlight(true);
-    //     }
-    // }
-    // else if (state->getFillDirection() == DOWN) {
-    //     while (!c->isBlack() && c->getY() != 0) {
-    //         c = cells[c->getX()][c->getY()-1];
-    //         c->setHighlight(true);
-    //     }
-    //     c = state->getSelectedCell();
-    //     while (!c->isBlack() && c->getY() != size - 1) {
-    //         c = cells[c->getX()][c->getY()+1];
-    //         c->setHighlight(true);
-    //     }
-    // }
-    ;
+    LetterCell *cell = state->getSelectedCell();
+    cell->setSelected(true);
+
+    // Remove the highlighting for the row/column of the new selected cell
+    int word_index = findWord(cell->getX(), cell->getY(), state->getFillDirection());
+    if (word_index == -1) {
+        std::cout << __func__ << ":" << __LINE__ << " Couldn't find word!" << std::endl;
+        return;
+    }
+    auto &word = words[word_index];
+    int offset = 0;
+    LetterCell *currentCell = cell;
+    while (currentCell && offset < word.length) {
+        currentCell->setHighlight(false);
+        offset++;
+        if (word.direction == ACROSS) {
+            currentCell = dynamic_cast<LetterCell *>(cells[word.startX + offset][word.startY]);
+        }
+        else if (word.direction == DOWN) {
+            currentCell = dynamic_cast<LetterCell *>(cells[word.startX][word.startY + offset]);
+        }
+    }
 }
 
 void Grid::removeHighlighting(LetterCell *cell)
 {
+    cell->setSelected(false);
+
     // Remove the highlighting for the row/column of the new selected cell
-    // if (state->getFillDirection() == ACROSS) {
-    //     for (int i = 0; i < size; i++) {
-    //         cells[i][cell->getY()]->setHighlight(false);
-    //     }
-    // }
-    // else if (state->getFillDirection() == DOWN) {
-    //     for (int i = 0; i < size; i++) {
-    //         cells[cell->getX()][i]->setHighlight(false);
-    //     }
-    // }
-    // cell->setSelected(false);
-    ;
+    int word_index = findWord(cell->getX(), cell->getY(), state->getFillDirection());
+    if (word_index == -1) {
+        std::cout << __func__ << ":" << __LINE__ << " Couldn't find word!" << std::endl;
+        return;
+    }
+    auto &word = words[word_index];
+    int offset = 0;
+    LetterCell *currentCell = cell;
+    while (currentCell && offset < word.length) {
+        currentCell->setHighlight(false);
+        offset++;
+        if (word.direction == ACROSS) {
+            currentCell = dynamic_cast<LetterCell *>(cells[word.startX + offset][word.startY]);
+        }
+        else if (word.direction == DOWN) {
+            currentCell = dynamic_cast<LetterCell *>(cells[word.startX][word.startY + offset]);
+        }
+    }
 }
 
 void Grid::updateSelectedCell(int x, int y)
@@ -404,6 +411,24 @@ struct Word Grid::parseWord(Cell *cell, Direction direction)
     return newWord;
 }
 
+int Grid::findWord(int x, int y, Direction direction)
+{
+    for (unsigned int i = 0; i < words.size(); i++) {
+        auto &word = words[i];
+        if (direction == ACROSS &&
+           word.startX <= x &&
+           x <= (word.startX + word.length - 1)) {
+            return i;
+        }
+        else if (direction == DOWN &&
+                word.startY <= y &&
+                y <= (word.startY + word.length - 1)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 /**
  * @brief Grid::updateWords      Parses the grid into words, first across then down
  *
@@ -422,5 +447,25 @@ void Grid::updateWords()
                 words.push_back(parseWord(cell, DOWN));
             }
         }
+    }
+    printWords();
+}
+
+void Grid::printWords()
+{
+    std::cout << "Words:" << std::endl;
+    for (auto &elem : words) {
+        std::cout << "(" << elem.startX << ", " << elem.startY << ") -> (";
+        int newX = elem.startX;
+        int newY = elem.startY;
+        if (elem.direction == ACROSS) {
+            newX += elem.length;
+            newX--;
+        }
+        if (elem.direction == DOWN) {
+            newY += elem.length;
+            newY--;
+        }
+        std::cout << newX << ", " << newY << ")" << std::endl;
     }
 }

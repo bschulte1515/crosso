@@ -52,7 +52,9 @@ public:
 
     bool startsWord(Cell *cell, Direction direction);
     struct Word parseWord(Cell *cell, Direction direction);
+    int findWord(int x, int y, Direction direction);
     void updateWords();
+    void printWords();
 
 signals:
     void gridResized();
