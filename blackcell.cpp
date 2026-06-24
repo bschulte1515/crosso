@@ -10,5 +10,3 @@ void BlackCell::draw(QPainter *painter)
 }
 
 bool BlackCell::isBlack() { return true; }
-
-void BlackCell::setHighlight(bool highlight) { return; }

@@ -10,7 +10,6 @@ void LetterCell::draw(QPainter *painter)
     painter->drawRect(x * size, y * size, size, size);
 
     QFont font = painter->font();
-    //font.setBold(true);
     font.setPointSize(16);
     painter->setFont(font);
 
@@ -28,5 +27,3 @@ void LetterCell::draw(QPainter *painter)
 }
 
 bool LetterCell::isBlack() { return false; }
-
-void LetterCell::setHighlight(bool newHighlighted) { highlighted = newHighlighted; }

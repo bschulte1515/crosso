@@ -11,7 +11,6 @@ public:
 
     virtual void draw(QPainter *painter) = 0;
     virtual bool isBlack() = 0;
-    virtual void setHighlight(bool newHighlighted) = 0;
     int getX() { return x; }
     int getY() { return y; }
     int getSize() { return size; }

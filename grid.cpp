@@ -131,6 +131,7 @@ void Grid::handleShortcut(QKeyEvent *event)
             break;
         case Qt::Key_D:
             state->swapFillDirection();
+            updateHighlighting(nullptr);
             break;
         default:
             break;
@@ -185,7 +186,7 @@ exit:
 LetterCell *Grid::getFirstLetter()
 {
     if (words.empty()) return NULL;
-    struct Word firstWord = words[0];
+    struct Word &firstWord = words[0];
     Cell *firstCell = cells[firstWord.startX][firstWord.startY];
     return dynamic_cast<LetterCell *>(firstCell);
 }
@@ -213,6 +214,7 @@ void Grid::addHighlighting()
 {
     LetterCell *cell = state->getSelectedCell();
     cell->setSelected(true);
+    cell->setHighlight(true);
 
     // Remove the highlighting for the row/column of the new selected cell
     int word_index = findWord(cell->getX(), cell->getY(), state->getFillDirection());
@@ -220,24 +222,17 @@ void Grid::addHighlighting()
         std::cout << __func__ << ":" << __LINE__ << " Couldn't find word!" << std::endl;
         return;
     }
-    auto &word = words[word_index];
-    int offset = 0;
-    LetterCell *currentCell = cell;
-    while (currentCell && offset < word.length) {
-        currentCell->setHighlight(false);
-        offset++;
-        if (word.direction == ACROSS) {
-            currentCell = dynamic_cast<LetterCell *>(cells[word.startX + offset][word.startY]);
-        }
-        else if (word.direction == DOWN) {
-            currentCell = dynamic_cast<LetterCell *>(cells[word.startX][word.startY + offset]);
-        }
+    struct Word &word = words[word_index];
+    auto wordCells = wordToCells(word);
+    for (LetterCell *lc : wordCells) {
+        lc->setHighlight(true);
     }
 }
 
 void Grid::removeHighlighting(LetterCell *cell)
 {
     cell->setSelected(false);
+    cell->setHighlight(false);
 
     // Remove the highlighting for the row/column of the new selected cell
     int word_index = findWord(cell->getX(), cell->getY(), state->getFillDirection());
@@ -245,19 +240,21 @@ void Grid::removeHighlighting(LetterCell *cell)
         std::cout << __func__ << ":" << __LINE__ << " Couldn't find word!" << std::endl;
         return;
     }
-    auto &word = words[word_index];
-    int offset = 0;
-    LetterCell *currentCell = cell;
-    while (currentCell && offset < word.length) {
-        currentCell->setHighlight(false);
-        offset++;
-        if (word.direction == ACROSS) {
-            currentCell = dynamic_cast<LetterCell *>(cells[word.startX + offset][word.startY]);
-        }
-        else if (word.direction == DOWN) {
-            currentCell = dynamic_cast<LetterCell *>(cells[word.startX][word.startY + offset]);
-        }
+    struct Word &word = words[word_index];
+    auto wordCells = wordToCells(word);
+    for (LetterCell *lc : wordCells) {
+        lc->setHighlight(false);
     }
+}
+
+void Grid::updateHighlighting(LetterCell *cell)
+{
+    if (cell) {
+        removeHighlighting(cell);
+    } else {
+        removeHighlighting(state->getSelectedCell());
+    }
+    addHighlighting();
 }
 
 void Grid::updateSelectedCell(int x, int y)
@@ -268,8 +265,7 @@ void Grid::updateSelectedCell(int x, int y)
     LetterCell *newCell = dynamic_cast<LetterCell *>(cells[x][y]);
     if (!oldCell | !newCell) return;
     state->setSelectedCell(newCell);
-    removeHighlighting(oldCell);
-    addHighlighting();
+    updateHighlighting(oldCell);
 }
 
 QString Grid::toString()
@@ -374,6 +370,7 @@ void Grid::loadFromFile()
  */
 bool Grid::startsWord(Cell *cell, Direction direction)
 {
+    if (cell->isBlack()) return false;
     if (direction == ACROSS) {
         if (cell->getX() == 0) return true;
         Cell *cellLeft = cells[cell->getX()-1][cell->getY()];
@@ -417,16 +414,34 @@ int Grid::findWord(int x, int y, Direction direction)
         auto &word = words[i];
         if (direction == ACROSS &&
            word.startX <= x &&
-           x <= (word.startX + word.length - 1)) {
+           x <= (word.startX + word.length - 1) &&
+           word.startY == y) {
             return i;
         }
         else if (direction == DOWN &&
                 word.startY <= y &&
-                y <= (word.startY + word.length - 1)) {
+                y <= (word.startY + word.length - 1) &&
+                word.startX == x) {
             return i;
         }
     }
     return -1;
+}
+
+std::vector<LetterCell *> Grid::wordToCells(struct Word &word)
+{
+    std::vector<LetterCell *> wordAsVector;
+    LetterCell *cell =
+        dynamic_cast<LetterCell *>(cells[word.startX][word.startY]);
+    while (cell) {
+        wordAsVector.push_back(cell);
+        cell = dynamic_cast<LetterCell *>(getNextCell(cell, word.direction));
+    }
+    if ((int)wordAsVector.size() != word.length) {
+        std::cout << "Something went wrong converting word to cells!" << std::endl;
+        return {};
+    }
+    return wordAsVector;
 }
 
 /**
@@ -438,8 +453,10 @@ int Grid::findWord(int x, int y, Direction direction)
 void Grid::updateWords()
 {
     words.clear();
-    for (auto &row : cells) {
-        for (auto *cell: row) {
+    Cell *cell = nullptr;
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            cell = cells[x][y];
             if (startsWord(cell, ACROSS)) {
                 words.push_back(parseWord(cell, ACROSS));
             }
@@ -448,7 +465,7 @@ void Grid::updateWords()
             }
         }
     }
-    printWords();
+    // printWords();
 }
 
 void Grid::printWords()

@@ -11,8 +11,8 @@ public:
 
     virtual void draw(QPainter *painter) override;
     virtual bool isBlack() override;
-    virtual void setHighlight(bool newHighlighted) override;
     bool isHighlighted() { return highlighted; }
+    void setHighlight(bool newHighlighted) { highlighted = newHighlighted; }
     void setSelected(bool newSelected) { selected = newSelected; }
     bool isSelected() { return selected; }
     QChar getLetter() { return letter; }

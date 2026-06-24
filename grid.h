@@ -53,6 +53,7 @@ public:
     bool startsWord(Cell *cell, Direction direction);
     struct Word parseWord(Cell *cell, Direction direction);
     int findWord(int x, int y, Direction direction);
+    std::vector<LetterCell *> wordToCells(struct Word &word);
     void updateWords();
     void printWords();
 
