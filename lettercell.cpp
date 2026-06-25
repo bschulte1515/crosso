@@ -1,6 +1,8 @@
 #include "lettercell.h"
+#include <iostream>
 
-LetterCell::LetterCell(int inX, int inY, int inSize, QChar letterIn) : Cell(inX, inY, inSize), letter(letterIn), highlighted(false) {}
+LetterCell::LetterCell(int inX, int inY, int inSize) : Cell(inX, inY, inSize) {}
+LetterCell::LetterCell(int inX, int inY, int inSize, QChar letterIn) : Cell(inX, inY, inSize), letter(letterIn) {}
 
 void LetterCell::draw(QPainter *painter)
 {
@@ -9,7 +11,6 @@ void LetterCell::draw(QPainter *painter)
     painter->drawRect(x * size, y * size, size, size);
 
     QFont font = painter->font();
-    //font.setBold(true);
     font.setPointSize(16);
     painter->setFont(font);
 
@@ -28,4 +29,6 @@ void LetterCell::draw(QPainter *painter)
 
 bool LetterCell::isBlack() { return false; }
 
-void LetterCell::setHighlight(bool newHighlighted) { highlighted = newHighlighted; }
+void LetterCell::print() {
+    std::cout << "(" << x << ", " << y << "): " << letter.toLatin1() << std::endl;
+}

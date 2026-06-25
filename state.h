@@ -4,13 +4,9 @@
 #include <QString>
 
 #include "lettercell.h"
+#include "direction.h"
 
 class Grid;
-
-enum Direction {
-    HORIZONTAL,
-    VERTICAL
-};
 
 enum EditingMode {
     LAYOUT,
@@ -33,7 +29,6 @@ public:
     void setCurrentFile(QString filename) { currentFile = filename; }
     QString getCurrentFile() { return currentFile; }
 
-    void updateSelectedCell(int x, int y);
     void swapFillDirection();
 
 private:
@@ -42,7 +37,7 @@ private:
 
     /* Paramters for editing answers */
     LetterCell *selectedCell; // Cell currently highlighted when not in grid edit mode
-    Direction fillDirection = HORIZONTAL; // Direction of highlighting/moving
+    Direction fillDirection = ACROSS; // Direction of highlighting/moving
 
     /* Parameters for editing grid */
     // TODO

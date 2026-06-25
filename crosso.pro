@@ -19,6 +19,7 @@ SOURCES += \
 HEADERS += \
     blackcell.h \
     cell.h \
+    direction.h \
     grid.h \
     lettercell.h \
     mainwindow.h \
