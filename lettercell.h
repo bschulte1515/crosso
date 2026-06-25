@@ -17,6 +17,7 @@ public:
     bool isSelected() { return selected; }
     QChar getLetter() { return letter; }
     void setLetter(QChar ch) { letter = ch; }
+    virtual void print() override;
 
 private:
     QChar letter = ' ';

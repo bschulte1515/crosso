@@ -130,8 +130,9 @@ void Grid::handleShortcut(QKeyEvent *event)
             loadFromFile();
             break;
         case Qt::Key_D:
+            removeHighlighting(state->getSelectedCell());
             state->swapFillDirection();
-            updateHighlighting(nullptr);
+            addHighlighting();
             break;
         default:
             break;
@@ -170,11 +171,8 @@ void Grid::keyPressEvent(QKeyEvent *event)
     if (!text.isEmpty() && state->getEditingMode() == FILL) {
         QChar ch = text.at(0).toUpper();
         if (ch.isLetter()) {
-            LetterCell *cell = dynamic_cast<LetterCell *>(state->getSelectedCell());
-            if (cell) {
-                cell->setLetter(ch);
-            }
-            Cell *next = getNextCell(state->getSelectedCell(), state->getFillDirection());
+            state->getSelectedCell()->setLetter(ch);
+            LetterCell *next = getNextLetter(state->getSelectedCell(), state->getFillDirection());
             if (next) updateSelectedCell(next->getX(), next->getY());
         }
     }
@@ -192,13 +190,13 @@ LetterCell *Grid::getFirstLetter()
 }
 
 /**
- * @brief Grid::getNextCell      Returns a pointer to the "next" cell
+ * @brief Grid::getNextLetter    Returns a pointer to the "next" LETTER cell
  * The next cell will either be the cell directly right or down, based on direction
  * @param cell					 The cell to start at
  * @param direction				 The direction in which to traverse the cells
  * @return 						 The next cell. Set to NULL if traversing would lead to OOB
  */
-Cell *Grid::getNextCell(Cell *cell, Direction direction)
+LetterCell *Grid::getNextLetter(LetterCell *cell, Direction direction)
 {
     int oldX = cell->getX();
     int oldY = cell->getY();
@@ -207,7 +205,7 @@ Cell *Grid::getNextCell(Cell *cell, Direction direction)
     int deltaY = (direction == DOWN &&
                   !(oldY == size - 1)) ? 1 : 0;
     if (deltaX == 0 && deltaY == 0) return NULL;
-    return cells[oldX + deltaX][oldY + deltaY];
+    return dynamic_cast<LetterCell *>(cells[oldX + deltaX][oldY + deltaY]);
 }
 
 void Grid::addHighlighting()
@@ -249,11 +247,7 @@ void Grid::removeHighlighting(LetterCell *cell)
 
 void Grid::updateHighlighting(LetterCell *cell)
 {
-    if (cell) {
-        removeHighlighting(cell);
-    } else {
-        removeHighlighting(state->getSelectedCell());
-    }
+    removeHighlighting(cell);
     addHighlighting();
 }
 
@@ -368,9 +362,8 @@ void Grid::loadFromFile()
  * @param direction 			The direction to check
  * @return						Whether the cell is the start of a word in the direction given
  */
-bool Grid::startsWord(Cell *cell, Direction direction)
+bool Grid::startsWord(LetterCell *cell, Direction direction)
 {
-    if (cell->isBlack()) return false;
     if (direction == ACROSS) {
         if (cell->getX() == 0) return true;
         Cell *cellLeft = cells[cell->getX()-1][cell->getY()];
@@ -391,7 +384,7 @@ bool Grid::startsWord(Cell *cell, Direction direction)
  * @param direction
  * @return
  */
-struct Word Grid::parseWord(Cell *cell, Direction direction)
+struct Word Grid::parseWord(LetterCell *cell, Direction direction)
 {
     struct Word newWord = {
         .startX = cell->getX(),
@@ -399,9 +392,9 @@ struct Word Grid::parseWord(Cell *cell, Direction direction)
         .length = 0,
         .direction = direction
     };
-    for (Cell *next = cell;
+    for (LetterCell *next = cell;
          next != NULL;
-         next = getNextCell(next, direction))
+         next = getNextLetter(next, direction))
     {
         newWord.length++;
     }
@@ -412,13 +405,13 @@ int Grid::findWord(int x, int y, Direction direction)
 {
     for (unsigned int i = 0; i < words.size(); i++) {
         auto &word = words[i];
-        if (direction == ACROSS &&
+        if (direction == ACROSS && word.direction == ACROSS &&
            word.startX <= x &&
            x <= (word.startX + word.length - 1) &&
            word.startY == y) {
             return i;
         }
-        else if (direction == DOWN &&
+        else if (direction == DOWN && word.direction == DOWN &&
                 word.startY <= y &&
                 y <= (word.startY + word.length - 1) &&
                 word.startX == x) {
@@ -435,7 +428,7 @@ std::vector<LetterCell *> Grid::wordToCells(struct Word &word)
         dynamic_cast<LetterCell *>(cells[word.startX][word.startY]);
     while (cell) {
         wordAsVector.push_back(cell);
-        cell = dynamic_cast<LetterCell *>(getNextCell(cell, word.direction));
+        cell = dynamic_cast<LetterCell *>(getNextLetter(cell, word.direction));
     }
     if ((int)wordAsVector.size() != word.length) {
         std::cout << "Something went wrong converting word to cells!" << std::endl;
@@ -454,35 +447,42 @@ void Grid::updateWords()
 {
     words.clear();
     Cell *cell = nullptr;
+    LetterCell *letter = nullptr;
     for (int y = 0; y < size; y++) {
         for (int x = 0; x < size; x++) {
             cell = cells[x][y];
-            if (startsWord(cell, ACROSS)) {
-                words.push_back(parseWord(cell, ACROSS));
+            if (cell->isBlack()) continue;
+            letter = dynamic_cast<LetterCell *>(cell);
+            if (letter && startsWord(letter, ACROSS)) {
+                words.push_back(parseWord(letter, ACROSS));
             }
-            if (startsWord(cell, DOWN)) {
-                words.push_back(parseWord(cell, DOWN));
+            if (letter && startsWord(letter, DOWN)) {
+                words.push_back(parseWord(letter, DOWN));
             }
         }
     }
-    // printWords();
+}
+
+void Grid::printWord(struct Word &word)
+{
+    std::cout << "(" << word.startX << ", " << word.startY << ") -> (";
+    int newX = word.startX;
+    int newY = word.startY;
+    if (word.direction == ACROSS) {
+        newX += word.length;
+        newX--;
+    }
+    if (word.direction == DOWN) {
+        newY += word.length;
+        newY--;
+    }
+    std::cout << newX << ", " << newY << ")" << std::endl;
 }
 
 void Grid::printWords()
 {
     std::cout << "Words:" << std::endl;
-    for (auto &elem : words) {
-        std::cout << "(" << elem.startX << ", " << elem.startY << ") -> (";
-        int newX = elem.startX;
-        int newY = elem.startY;
-        if (elem.direction == ACROSS) {
-            newX += elem.length;
-            newX--;
-        }
-        if (elem.direction == DOWN) {
-            newY += elem.length;
-            newY--;
-        }
-        std::cout << newX << ", " << newY << ")" << std::endl;
+    for (auto &word : words) {
+        printWord(word);
     }
 }

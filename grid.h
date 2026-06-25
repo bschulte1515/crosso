@@ -33,7 +33,7 @@ public:
     void keyPressEvent(QKeyEvent *event) override;
 
     LetterCell *getFirstLetter();
-    Cell *getNextCell(Cell *cell, Direction direction);
+    LetterCell *getNextLetter(LetterCell *cell, Direction direction);
     void addHighlighting();
     void removeHighlighting(LetterCell *cell);
     void updateHighlighting(LetterCell *oldCell);
@@ -50,11 +50,12 @@ public:
     void setSize(int newSize) { size = newSize; }
     auto& getCells() { return cells; }
 
-    bool startsWord(Cell *cell, Direction direction);
-    struct Word parseWord(Cell *cell, Direction direction);
+    bool startsWord(LetterCell *cell, Direction direction);
+    struct Word parseWord(LetterCell *cell, Direction direction);
     int findWord(int x, int y, Direction direction);
     std::vector<LetterCell *> wordToCells(struct Word &word);
     void updateWords();
+    void printWord(struct Word &word);
     void printWords();
 
 signals:

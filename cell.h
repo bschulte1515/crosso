@@ -14,6 +14,7 @@ public:
     int getX() { return x; }
     int getY() { return y; }
     int getSize() { return size; }
+    virtual void print() = 0;
 
 protected:
     int x;
