@@ -14,8 +14,8 @@ struct Word {
     int startY;
     int length;
     Direction direction;
+    int clueNumber;
     // TODO
-    // int clueNumber;
     // QString clue;
 };
 
@@ -51,7 +51,7 @@ public:
     auto& getCells() { return cells; }
 
     bool startsWord(LetterCell *cell, Direction direction);
-    struct Word parseWord(LetterCell *cell, Direction direction);
+    struct Word parseWord(LetterCell *cell, Direction direction, int number);
     int findWord(int x, int y, Direction direction);
     std::vector<LetterCell *> wordToCells(struct Word &word);
     void updateWords();

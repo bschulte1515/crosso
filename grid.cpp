@@ -382,15 +382,17 @@ bool Grid::startsWord(LetterCell *cell, Direction direction)
  * 								@note Assumes that this Cell is the start of the word
  * @param cell
  * @param direction
+ * @param number
  * @return
  */
-struct Word Grid::parseWord(LetterCell *cell, Direction direction)
+struct Word Grid::parseWord(LetterCell *cell, Direction direction, int number)
 {
     struct Word newWord = {
         .startX = cell->getX(),
         .startY = cell->getY(),
         .length = 0,
-        .direction = direction
+        .direction = direction,
+        .clueNumber = number
     };
     for (LetterCell *next = cell;
          next != NULL;
@@ -445,6 +447,8 @@ std::vector<LetterCell *> Grid::wordToCells(struct Word &word)
  */
 void Grid::updateWords()
 {
+    int clueNumber = 1;
+    bool wordParsed = false;
     words.clear();
     Cell *cell = nullptr;
     LetterCell *letter = nullptr;
@@ -453,12 +457,16 @@ void Grid::updateWords()
             cell = cells[x][y];
             if (cell->isBlack()) continue;
             letter = dynamic_cast<LetterCell *>(cell);
+            wordParsed = false;
             if (letter && startsWord(letter, ACROSS)) {
-                words.push_back(parseWord(letter, ACROSS));
+                words.push_back(parseWord(letter, ACROSS, clueNumber));
+                wordParsed = true;
             }
             if (letter && startsWord(letter, DOWN)) {
-                words.push_back(parseWord(letter, DOWN));
+                words.push_back(parseWord(letter, DOWN, clueNumber));
+                wordParsed = true;
             }
+            if (wordParsed) clueNumber++;
         }
     }
 }
