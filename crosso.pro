@@ -23,7 +23,8 @@ HEADERS += \
     grid.h \
     lettercell.h \
     mainwindow.h \
-    state.h
+    state.h \
+    word.h
 
 FORMS += \
     mainwindow.ui

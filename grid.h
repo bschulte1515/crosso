@@ -6,18 +6,12 @@
 #include "cell.h"
 #include "lettercell.h"
 #include "direction.h"
+#include "word.h"
+
+static constexpr QColor HIGHLIGHT_COLOR(0, 100, 255, 40);
+static constexpr QColor SELECTED_COLOR(0, 50, 255, 50);
 
 class State;
-
-struct Word {
-    int startX;
-    int startY;
-    int length;
-    Direction direction;
-    int clueNumber;
-    // TODO
-    // QString clue;
-};
 
 class Grid : public QWidget
 {
@@ -34,11 +28,7 @@ public:
 
     LetterCell *getFirstLetter();
     LetterCell *getNextLetter(LetterCell *cell, Direction direction);
-    void addHighlighting();
-    void removeHighlighting(LetterCell *cell);
-    void updateHighlighting(LetterCell *oldCell);
-    void updateSelectedCell(int x, int y);
-    void toggleCells(int x, int y, bool symmetric);
+    void toggleCell(Cell *cell, bool symmetric);
     void switchEditingMode();
     void handleShortcut(QKeyEvent *event);
     QString toString();

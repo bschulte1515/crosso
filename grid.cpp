@@ -1,13 +1,15 @@
-#include "grid.h"
-#include "state.h"
-#include "lettercell.h"
-#include "blackcell.h"
 #include <QPainter>
 #include <QMouseEvent>
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <iostream>
+
+#include "grid.h"
+#include "state.h"
+#include "lettercell.h"
+#include "blackcell.h"
+#include "word.h"
 
 Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
     : QWidget{parent}, state(stateIn), size(g), cellSize(c)
@@ -75,17 +77,25 @@ void Grid::paintEvent(QPaintEvent *event)
             cells[i][j]->draw(&painter);
         }
     }
+
+    for (auto &cell : )
+    // painter.fillRect(x * size, y * size, size, size, highlightColor);
+
+    LetterCell *cell = state->getSelectedCell();
+    painter.fillRect(cell->getX() * cellSize, cell->getY() * cellSize, cellSize, cellSize, SELECTED_COLOR);
 }
 
-void Grid::toggleCells(int x, int y, bool symmetric)
+void Grid::toggleCell(Cell *cell, bool symmetric)
 {
-    bool wasBlack = cells[x][y]->isBlack();
+    bool wasBlack = cell->isBlack();
+    int x = cell->getX();
+    int y = cell->getY();
 
-    delete cells[x][y];
+    delete cell;
     if (wasBlack) {
-        cells[x][y] = new LetterCell(x, y, cellSize);
+        cell = new LetterCell(x, y, cellSize);
     } else {
-        cells[x][y] = new BlackCell(x, y, cellSize);
+        cell = new BlackCell(x, y, cellSize);
     }
     if (!symmetric) return;
 
@@ -143,12 +153,15 @@ void Grid::mousePressEvent(QMouseEvent *event)
 {
     int x = event->position().x() / cellSize;
     int y = event->position().y() / cellSize;
+    if (x >= size || y >= size) return;
+
+    Cell *cell = cells[x][y];
 
     if (state->getEditingMode() == LAYOUT) {
         bool symmetricGrid = true;
-        toggleCells(x, y, symmetricGrid);
+        toggleCell(cell, symmetricGrid);
     } else {
-        updateSelectedCell(x, y);
+        state->selectCell(cell);
     }
 
     update();
