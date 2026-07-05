@@ -8,8 +8,8 @@
 #include "direction.h"
 #include "word.h"
 
-static constexpr QColor HIGHLIGHT_COLOR(0, 100, 255, 40);
-static constexpr QColor SELECTED_COLOR(0, 50, 255, 50);
+static constexpr QColor HIGHLIGHT_COLOR(0, 50, 255, 90);
+static constexpr QColor SELECTED_COLOR(0, 25, 255, 100);
 
 class State;
 
