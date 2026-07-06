@@ -18,6 +18,7 @@ SOURCES += \
     state.cpp
 
 HEADERS += \
+    action.h \
     blackcell.h \
     cell.h \
     direction.h \
