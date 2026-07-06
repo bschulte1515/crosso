@@ -6,18 +6,13 @@
 #include "cell.h"
 #include "lettercell.h"
 #include "direction.h"
+#include "word.h"
+
+static constexpr QColor HIGHLIGHT_COLOR(10, 30, 255, 140);
+static constexpr QColor SELECTED_COLOR(10, 30, 255, 200);
+static constexpr QColor PERPENDICULAR_COLOR(220, 221, 220, 130);
 
 class State;
-
-struct Word {
-    int startX;
-    int startY;
-    int length;
-    Direction direction;
-    // TODO
-    // int clueNumber;
-    // QString clue;
-};
 
 class Grid : public QWidget
 {
@@ -32,13 +27,12 @@ public:
     void mousePressEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
+    void drawWords(QPainter *painter);
+    void drawBorder(QPainter *painter);
+
     LetterCell *getFirstLetter();
     LetterCell *getNextLetter(LetterCell *cell, Direction direction);
-    void addHighlighting();
-    void removeHighlighting(LetterCell *cell);
-    void updateHighlighting(LetterCell *oldCell);
-    void updateSelectedCell(int x, int y);
-    void toggleCells(int x, int y, bool symmetric);
+    void toggleCell(Cell *cell, bool symmetric);
     void switchEditingMode();
     void handleShortcut(QKeyEvent *event);
     QString toString();
@@ -46,17 +40,23 @@ public:
     void saveToFile();
     void loadFromFile();
     int getSize() const { return size; }
-    int getCellSize() const { return cellSize; }
     void setSize(int newSize) { size = newSize; }
+    int getCellSize() const { return cellSize; }
     auto& getCells() { return cells; }
 
     bool startsWord(LetterCell *cell, Direction direction);
-    struct Word parseWord(LetterCell *cell, Direction direction);
+    struct Word parseWord(LetterCell *cell, Direction direction, int number);
     int findWord(int x, int y, Direction direction);
     std::vector<LetterCell *> wordToCells(struct Word &word);
     void updateWords();
     void printWord(struct Word &word);
     void printWords();
+
+    static constexpr int inner_line_width = 1;
+    static constexpr int border_line_width = 2;
+    static constexpr int letter_font_size = 14;
+    static constexpr int clue_number_font_size = 7;
+    static constexpr int letter_offset_y = 5;
 
 signals:
     void gridResized();
@@ -69,8 +69,6 @@ private:
     int cellSize;
     std::vector<std::vector<Cell *>> cells;
     std::vector<struct Word> words;
-
-    static constexpr int PEN_WIDTH = 1;
 };
 
 #endif // GRID_H

@@ -1,7 +1,3 @@
-#include "grid.h"
-#include "state.h"
-#include "lettercell.h"
-#include "blackcell.h"
 #include <QPainter>
 #include <QMouseEvent>
 #include <QKeyEvent>
@@ -9,11 +5,22 @@
 #include <QMessageBox>
 #include <iostream>
 
+#include "grid.h"
+#include "state.h"
+#include "lettercell.h"
+#include "blackcell.h"
+#include "word.h"
+
 Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
     : QWidget{parent}, state(stateIn), size(g), cellSize(c)
 {
-    // Add the width of the pen to the canvas size to fit in all the edges of the board
-    this->setFixedSize(size * cellSize + PEN_WIDTH, size * cellSize + PEN_WIDTH);
+    // For each direction (horizontally and vertically),
+    // 	The grid will have @p size + 1 "inner lines" of width INNER_LINE_WIDTH
+    //  The grid will have 2 "border lines" of width BORDER_LINE_WIDTH
+    // 	The grid will have @p size cells of width cellSize
+    this->setFixedSize(
+        ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize),
+        ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize));
 
     for (int i = 0; i < size; i++) {
         std::vector<Cell*> row;
@@ -43,43 +50,115 @@ void Grid::resetGrid()
     updateWords();
     LetterCell *firstLetter = getFirstLetter();
     assert(firstLetter != NULL);
-    state->setSelectedCell(firstLetter);
+    state->selectCell(firstLetter);
+}
+
+/**
+ * @brief Draw each word (i.e. clue numbers) and highlight selected word/cell
+ * @param painter
+ */
+void Grid::drawWords(QPainter *painter)
+{
+    LetterCell *selected = state->getSelectedCell();
+    painter->fillRect(selected->toRect(), SELECTED_COLOR);
+    selected->drawLetter(painter, Qt::white); // Replace highlighted letters with white
+
+    int word_index = findWord(selected->getX(), selected->getY(), state->getFillDirection());
+    if (word_index != -1) {
+        for (LetterCell *letter : wordToCells(words[word_index])) {
+            if (letter == selected) continue;
+            painter->fillRect(letter->toRect(), HIGHLIGHT_COLOR);
+            letter->drawLetter(painter, Qt::white); // Replace highlighted letters with white
+        }
+    }
+
+    // Give a light gray, transparent background to word in other direction
+    word_index = findWord(selected->getX(), selected->getY(), (Direction)!state->getFillDirection());
+    if (word_index != -1) {
+        for (LetterCell *letter : wordToCells(words[word_index])) {
+            if (letter == selected) continue;
+            painter->fillRect(letter->toRect(), PERPENDICULAR_COLOR);
+            letter->drawLetter(painter, Qt::black); // Write over letters again
+        }
+    }
+
+    // Draw each clue number
+    QFont font = painter->font();
+    font.setPointSize(this->clue_number_font_size);
+    painter->setFont(font);
+    painter->setPen(Qt::black);
+    for (auto &word : words) {
+        painter->drawText(
+            cells[word.startX][word.startY]->toRectWithOffset(2, 1),
+            Qt::AlignTop | Qt::AlignLeft,
+            QString::number(word.clueNumber)
+        );
+    }
+}
+
+void Grid::drawBorder(QPainter *painter)
+{
+    QPen pen(Qt::black);
+    pen.setWidth(border_line_width);
+    pen.setCapStyle(Qt::SquareCap);
+    painter->setPen(pen);
+    painter->drawRect(0, 0, width() - 1, height() - 1);
+    painter->drawRect(1, 1, width() - 1, height() - 1);
 }
 
 void Grid::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
-
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, false);
 
+    // Paint background white and draw black border
     painter.fillRect(rect(), Qt::white);
+    drawBorder(&painter);
 
-    QPen pen(Qt::black);
-    pen.setWidth(PEN_WIDTH);
-    pen.setCapStyle(Qt::SquareCap);
-    painter.setPen(pen);
+    painter.translate(border_line_width, border_line_width);
 
-    for (int row = 0; row <= size; row++)
-    {
-        painter.drawLine(0, row * cellSize, size * cellSize, row * cellSize);
-    }
-
-    for (int col = 0; col <= size; col++)
-    {
-        painter.drawLine(col * cellSize, 0, col * cellSize, size * cellSize);
-    }
-
+    // Draw each of the cells
     for (int i = 0; i < size; ++i) {
         for (int j = 0; j < size; ++j) {
             cells[i][j]->draw(&painter);
         }
     }
+
+    // Draw each of the clue numbers/highlight
+    if (state->getEditingMode() == FILL) {
+        drawWords(&painter);
+    }
+
+    // Draw the lines between cells
+    QPen pen(Qt::darkGray);
+    pen.setWidth(inner_line_width);
+    pen.setCapStyle(Qt::SquareCap);
+    painter.setPen(pen);
+
+    for (int row = 0; row <= size; row++) {
+        painter.drawLine(
+            0,
+            row * (cellSize + inner_line_width),
+            size * (cellSize + inner_line_width),
+            row * (cellSize + inner_line_width)
+        );
+    }
+    for (int col = 0; col <= size; col++) {
+        painter.drawLine(
+            col * (cellSize + inner_line_width),
+            0,
+            col * (cellSize + inner_line_width),
+            size * (cellSize + inner_line_width)
+        );
+    }
 }
 
-void Grid::toggleCells(int x, int y, bool symmetric)
+void Grid::toggleCell(Cell *cell, bool symmetric)
 {
-    bool wasBlack = cells[x][y]->isBlack();
+    bool wasBlack = cell->isBlack();
+    int x = cell->getX();
+    int y = cell->getY();
 
     delete cells[x][y];
     if (wasBlack) {
@@ -103,12 +182,10 @@ void Grid::switchEditingMode()
     case LAYOUT: {
         state->setEditingMode(FILL);
         resetGrid();
-        addHighlighting();
         break;
     }
     case FILL: {
         state->setEditingMode(LAYOUT);
-        removeHighlighting(state->getSelectedCell());
         break;
     }
     case CLUES:
@@ -130,9 +207,7 @@ void Grid::handleShortcut(QKeyEvent *event)
             loadFromFile();
             break;
         case Qt::Key_D:
-            removeHighlighting(state->getSelectedCell());
             state->swapFillDirection();
-            addHighlighting();
             break;
         default:
             break;
@@ -141,14 +216,18 @@ void Grid::handleShortcut(QKeyEvent *event)
 
 void Grid::mousePressEvent(QMouseEvent *event)
 {
-    int x = event->position().x() / cellSize;
-    int y = event->position().y() / cellSize;
+    if (event->position().x() <= border_line_width || event->position().y() <= border_line_width) return;
+    int x = (event->position().x() - border_line_width) / (cellSize + inner_line_width);
+    int y = (event->position().y() - border_line_width) / (cellSize + inner_line_width);
+    if (x >= size || y >= size) return;
+
+    Cell *cell = cells[x][y];
 
     if (state->getEditingMode() == LAYOUT) {
         bool symmetricGrid = true;
-        toggleCells(x, y, symmetricGrid);
+        toggleCell(cell, symmetricGrid);
     } else {
-        updateSelectedCell(x, y);
+        state->selectCell(cell);
     }
 
     update();
@@ -172,8 +251,9 @@ void Grid::keyPressEvent(QKeyEvent *event)
         QChar ch = text.at(0).toUpper();
         if (ch.isLetter()) {
             state->getSelectedCell()->setLetter(ch);
-            LetterCell *next = getNextLetter(state->getSelectedCell(), state->getFillDirection());
-            if (next) updateSelectedCell(next->getX(), next->getY());
+            state->selectCell(
+                getNextLetter(state->getSelectedCell(), state->getFillDirection())
+            );
         }
     }
 
@@ -190,8 +270,8 @@ LetterCell *Grid::getFirstLetter()
 }
 
 /**
- * @brief Grid::getNextLetter    Returns a pointer to the "next" LETTER cell
- * The next cell will either be the cell directly right or down, based on direction
+ * @brief Returns a pointer to the "next" cell. The next cell will either be the cell directly
+ * 		  right or down, based on direction
  * @param cell					 The cell to start at
  * @param direction				 The direction in which to traverse the cells
  * @return 						 The next cell. Set to NULL if traversing would lead to OOB
@@ -206,60 +286,6 @@ LetterCell *Grid::getNextLetter(LetterCell *cell, Direction direction)
                   !(oldY == size - 1)) ? 1 : 0;
     if (deltaX == 0 && deltaY == 0) return NULL;
     return dynamic_cast<LetterCell *>(cells[oldX + deltaX][oldY + deltaY]);
-}
-
-void Grid::addHighlighting()
-{
-    LetterCell *cell = state->getSelectedCell();
-    cell->setSelected(true);
-    cell->setHighlight(true);
-
-    // Remove the highlighting for the row/column of the new selected cell
-    int word_index = findWord(cell->getX(), cell->getY(), state->getFillDirection());
-    if (word_index == -1) {
-        std::cout << __func__ << ":" << __LINE__ << " Couldn't find word!" << std::endl;
-        return;
-    }
-    struct Word &word = words[word_index];
-    auto wordCells = wordToCells(word);
-    for (LetterCell *lc : wordCells) {
-        lc->setHighlight(true);
-    }
-}
-
-void Grid::removeHighlighting(LetterCell *cell)
-{
-    cell->setSelected(false);
-    cell->setHighlight(false);
-
-    // Remove the highlighting for the row/column of the new selected cell
-    int word_index = findWord(cell->getX(), cell->getY(), state->getFillDirection());
-    if (word_index == -1) {
-        std::cout << __func__ << ":" << __LINE__ << " Couldn't find word!" << std::endl;
-        return;
-    }
-    struct Word &word = words[word_index];
-    auto wordCells = wordToCells(word);
-    for (LetterCell *lc : wordCells) {
-        lc->setHighlight(false);
-    }
-}
-
-void Grid::updateHighlighting(LetterCell *cell)
-{
-    removeHighlighting(cell);
-    addHighlighting();
-}
-
-void Grid::updateSelectedCell(int x, int y)
-{
-    // It should only be possible to set the selected cell to a letter cell.
-    // Attempts to select a black cell with be ignored here.
-    LetterCell *oldCell = dynamic_cast<LetterCell *>(state->getSelectedCell());
-    LetterCell *newCell = dynamic_cast<LetterCell *>(cells[x][y]);
-    if (!oldCell | !newCell) return;
-    state->setSelectedCell(newCell);
-    updateHighlighting(oldCell);
 }
 
 QString Grid::toString()
@@ -302,8 +328,12 @@ void Grid::fromString(QString newGrid, int newSize)
         cells.push_back(row);
     }
 
-    this->setFixedSize(size * cellSize + PEN_WIDTH, size * cellSize + PEN_WIDTH);
+    this->setFixedSize(
+        ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize),
+        ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize));
+
     emit gridResized();
+    resetGrid();
     update();
 }
 
@@ -382,15 +412,17 @@ bool Grid::startsWord(LetterCell *cell, Direction direction)
  * 								@note Assumes that this Cell is the start of the word
  * @param cell
  * @param direction
+ * @param number
  * @return
  */
-struct Word Grid::parseWord(LetterCell *cell, Direction direction)
+struct Word Grid::parseWord(LetterCell *cell, Direction direction, int number)
 {
     struct Word newWord = {
         .startX = cell->getX(),
         .startY = cell->getY(),
         .length = 0,
-        .direction = direction
+        .direction = direction,
+        .clueNumber = number
     };
     for (LetterCell *next = cell;
          next != NULL;
@@ -428,7 +460,7 @@ std::vector<LetterCell *> Grid::wordToCells(struct Word &word)
         dynamic_cast<LetterCell *>(cells[word.startX][word.startY]);
     while (cell) {
         wordAsVector.push_back(cell);
-        cell = dynamic_cast<LetterCell *>(getNextLetter(cell, word.direction));
+        cell = getNextLetter(cell, word.direction);
     }
     if ((int)wordAsVector.size() != word.length) {
         std::cout << "Something went wrong converting word to cells!" << std::endl;
@@ -445,6 +477,8 @@ std::vector<LetterCell *> Grid::wordToCells(struct Word &word)
  */
 void Grid::updateWords()
 {
+    int clueNumber = 1;
+    bool wordParsed = false;
     words.clear();
     Cell *cell = nullptr;
     LetterCell *letter = nullptr;
@@ -453,12 +487,16 @@ void Grid::updateWords()
             cell = cells[x][y];
             if (cell->isBlack()) continue;
             letter = dynamic_cast<LetterCell *>(cell);
+            wordParsed = false;
             if (letter && startsWord(letter, ACROSS)) {
-                words.push_back(parseWord(letter, ACROSS));
+                words.push_back(parseWord(letter, ACROSS, clueNumber));
+                wordParsed = true;
             }
             if (letter && startsWord(letter, DOWN)) {
-                words.push_back(parseWord(letter, DOWN));
+                words.push_back(parseWord(letter, DOWN, clueNumber));
+                wordParsed = true;
             }
+            if (wordParsed) clueNumber++;
         }
     }
 }

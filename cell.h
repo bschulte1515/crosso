@@ -16,6 +16,9 @@ public:
     int getSize() { return size; }
     virtual void print() = 0;
 
+    QRect toRect();
+    QRect toRectWithOffset(int x_offset, int y_offset);
+
 protected:
     int x;
     int y;

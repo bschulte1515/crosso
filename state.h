@@ -23,6 +23,7 @@ public:
     Grid *getGrid() { return grid; }
     void setSelectedCell(LetterCell *cell) { selectedCell = cell; }
     LetterCell *getSelectedCell() { return selectedCell; }
+    void selectCell(Cell *cell);
     Direction getFillDirection() { return fillDirection; }
     void setEditingMode(EditingMode mode) { editingMode = mode; }
     EditingMode getEditingMode() { return editingMode; }

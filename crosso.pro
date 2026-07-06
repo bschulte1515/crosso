@@ -10,6 +10,7 @@ CONFIG += c++17
 
 SOURCES += \
     blackcell.cpp \
+    cell.cpp \
     grid.cpp \
     lettercell.cpp \
     main.cpp \
@@ -23,7 +24,8 @@ HEADERS += \
     grid.h \
     lettercell.h \
     mainwindow.h \
-    state.h
+    state.h \
+    word.h
 
 FORMS += \
     mainwindow.ui
