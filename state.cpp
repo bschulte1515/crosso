@@ -3,6 +3,7 @@
 
 void State::swapFillDirection()
 {
+    if (editingMode != FILL) return;
     fillDirection =
         fillDirection == ACROSS ? DOWN : ACROSS;
 }

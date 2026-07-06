@@ -10,6 +10,7 @@ CONFIG += c++17
 
 SOURCES += \
     blackcell.cpp \
+    cell.cpp \
     grid.cpp \
     lettercell.cpp \
     main.cpp \

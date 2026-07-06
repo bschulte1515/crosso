@@ -14,8 +14,13 @@
 Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
     : QWidget{parent}, state(stateIn), size(g), cellSize(c)
 {
-    // Add the width of the pen to the canvas size to fit in all the edges of the board
-    this->setFixedSize(size * cellSize + PEN_WIDTH, size * cellSize + PEN_WIDTH);
+    // For each direction (horizontally and vertically),
+    // 	The grid will have @p size + 1 "inner lines" of width INNER_LINE_WIDTH
+    //  The grid will have 2 "border lines" of width BORDER_LINE_WIDTH
+    // 	The grid will have @p size cells of width cellSize
+    this->setFixedSize(
+        ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize),
+        ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize));
 
     for (int i = 0; i < size; i++) {
         std::vector<Cell*> row;
@@ -48,50 +53,105 @@ void Grid::resetGrid()
     state->selectCell(firstLetter);
 }
 
+/**
+ * @brief Draw each word (i.e. clue numbers) and highlight selected word/cell
+ * @param painter
+ */
+void Grid::drawWords(QPainter *painter)
+{
+    LetterCell *selected = state->getSelectedCell();
+    painter->fillRect(selected->toRect(), SELECTED_COLOR);
+    selected->drawLetter(painter, Qt::white); // Replace highlighted letters with white
+
+    int word_index = findWord(selected->getX(), selected->getY(), state->getFillDirection());
+    if (word_index != -1) {
+        for (LetterCell *letter : wordToCells(words[word_index])) {
+            if (letter == selected) continue;
+            painter->fillRect(letter->toRect(), HIGHLIGHT_COLOR);
+            letter->drawLetter(painter, Qt::white); // Replace highlighted letters with white
+        }
+    }
+
+    // Give a light gray, transparent background to word in other direction
+    word_index = findWord(selected->getX(), selected->getY(), (Direction)!state->getFillDirection());
+    if (word_index != -1) {
+        for (LetterCell *letter : wordToCells(words[word_index])) {
+            if (letter == selected) continue;
+            painter->fillRect(letter->toRect(), PERPENDICULAR_COLOR);
+            letter->drawLetter(painter, Qt::black); // Write over letters again
+        }
+    }
+
+    // Draw each clue number
+    QFont font = painter->font();
+    font.setPointSize(this->clue_number_font_size);
+    painter->setFont(font);
+    painter->setPen(Qt::black);
+    for (auto &word : words) {
+        painter->drawText(
+            cells[word.startX][word.startY]->toRectWithOffset(2, 1),
+            Qt::AlignTop | Qt::AlignLeft,
+            QString::number(word.clueNumber)
+        );
+    }
+}
+
+void Grid::drawBorder(QPainter *painter)
+{
+    QPen pen(Qt::black);
+    pen.setWidth(border_line_width);
+    pen.setCapStyle(Qt::SquareCap);
+    painter->setPen(pen);
+    painter->drawRect(0, 0, width() - 1, height() - 1);
+    painter->drawRect(1, 1, width() - 1, height() - 1);
+}
+
 void Grid::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
-
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, false);
 
+    // Paint background white and draw black border
     painter.fillRect(rect(), Qt::white);
+    drawBorder(&painter);
 
-    QPen pen(Qt::black);
-    pen.setWidth(PEN_WIDTH);
-    pen.setCapStyle(Qt::SquareCap);
-    painter.setPen(pen);
+    painter.translate(border_line_width, border_line_width);
 
-    for (int row = 0; row <= size; row++)
-    {
-        painter.drawLine(0, row * cellSize, size * cellSize, row * cellSize);
-    }
-
-    for (int col = 0; col <= size; col++)
-    {
-        painter.drawLine(col * cellSize, 0, col * cellSize, size * cellSize);
-    }
-
+    // Draw each of the cells
     for (int i = 0; i < size; ++i) {
         for (int j = 0; j < size; ++j) {
-
             cells[i][j]->draw(&painter);
         }
     }
-    // Highlight/select color should not be shown in LAYOUT mode
-    if (state->getEditingMode() == LAYOUT) return;
 
-    LetterCell *cell = state->getSelectedCell();
-    int word_index = findWord(cell->getX(), cell->getY(), state->getFillDirection());
-    if (word_index == -1) {
-        return;
-    }
-    struct Word &word = words[word_index];
-    for (LetterCell *letter : wordToCells(word)) {
-        painter.fillRect(letter->getX() * cellSize, letter->getY() * cellSize, cellSize, cellSize, HIGHLIGHT_COLOR);
+    // Draw each of the clue numbers/highlight
+    if (state->getEditingMode() == FILL) {
+        drawWords(&painter);
     }
 
-    painter.fillRect(cell->getX() * cellSize, cell->getY() * cellSize, cellSize, cellSize, SELECTED_COLOR);
+    // Draw the lines between cells
+    QPen pen(Qt::darkGray);
+    pen.setWidth(inner_line_width);
+    pen.setCapStyle(Qt::SquareCap);
+    painter.setPen(pen);
+
+    for (int row = 0; row <= size; row++) {
+        painter.drawLine(
+            0,
+            row * (cellSize + inner_line_width),
+            size * (cellSize + inner_line_width),
+            row * (cellSize + inner_line_width)
+        );
+    }
+    for (int col = 0; col <= size; col++) {
+        painter.drawLine(
+            col * (cellSize + inner_line_width),
+            0,
+            col * (cellSize + inner_line_width),
+            size * (cellSize + inner_line_width)
+        );
+    }
 }
 
 void Grid::toggleCell(Cell *cell, bool symmetric)
@@ -156,8 +216,9 @@ void Grid::handleShortcut(QKeyEvent *event)
 
 void Grid::mousePressEvent(QMouseEvent *event)
 {
-    int x = event->position().x() / cellSize;
-    int y = event->position().y() / cellSize;
+    if (event->position().x() <= border_line_width || event->position().y() <= border_line_width) return;
+    int x = (event->position().x() - border_line_width) / (cellSize + inner_line_width);
+    int y = (event->position().y() - border_line_width) / (cellSize + inner_line_width);
     if (x >= size || y >= size) return;
 
     Cell *cell = cells[x][y];
@@ -267,8 +328,12 @@ void Grid::fromString(QString newGrid, int newSize)
         cells.push_back(row);
     }
 
-    this->setFixedSize(size * cellSize + PEN_WIDTH, size * cellSize + PEN_WIDTH);
+    this->setFixedSize(
+        ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize),
+        ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize));
+
     emit gridResized();
+    resetGrid();
     update();
 }
 

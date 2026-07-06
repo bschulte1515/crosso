@@ -14,7 +14,10 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    setFixedSize(GRID_SIZE * CELL_SIZE + BORDER_PX * 2, GRID_SIZE * CELL_SIZE + BORDER_PX * 2);
+    setFixedSize(
+        ((GRID_SIZE + 1) * Grid::inner_line_width) + (2 * (Grid::border_line_width + BORDER_PX)) + (GRID_SIZE * CELL_SIZE),
+        ((GRID_SIZE + 1) * Grid::inner_line_width) + (2 * (Grid::border_line_width + BORDER_PX)) + (GRID_SIZE * CELL_SIZE)
+    );
 
     grid = new Grid(this, state, GRID_SIZE, CELL_SIZE);
     state->setGrid(grid);

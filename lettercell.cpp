@@ -1,4 +1,5 @@
 #include "lettercell.h"
+#include "grid.h"
 #include <iostream>
 
 LetterCell::LetterCell(int inX, int inY, int inSize) : Cell(inX, inY, inSize) {}
@@ -6,15 +7,21 @@ LetterCell::LetterCell(int inX, int inY, int inSize, QChar letterIn) : Cell(inX,
 
 void LetterCell::draw(QPainter *painter)
 {
-    painter->fillRect(x * size, y * size, size, size, Qt::white);
-    painter->setPen(Qt::black);
-    painter->drawRect(x * size, y * size, size, size);
+    drawLetter(painter, Qt::black);
+}
 
+void LetterCell::drawLetter(QPainter *painter, QColor color)
+{
+    painter->setPen(color);
     QFont font = painter->font();
-    font.setPointSize(16);
+    font.setPointSize(Grid::letter_font_size);
     painter->setFont(font);
 
-    painter->drawText(x * size, y * size + LETTER_Y_OFFSET, size, size, Qt::AlignCenter, QString(letter));
+    painter->drawText(
+        toRectWithOffset(0, Grid::letter_offset_y),
+        Qt::AlignCenter,
+        QString(letter)
+    );
 }
 
 bool LetterCell::isBlack() { return false; }
