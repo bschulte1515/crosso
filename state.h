@@ -2,9 +2,12 @@
 #define STATE_H
 
 #include <QString>
+#include <QHash>
+#include <QKeyEvent>
 
 #include "lettercell.h"
 #include "direction.h"
+#include "action.h"
 
 class Grid;
 
@@ -17,7 +20,11 @@ enum EditingMode {
 class State
 {
 public:
-    State() {}
+    State();
+
+    /// TODO: When we allow the ability to change keybinds, we'll need to save them
+    /// to a config file. When starting up, we would find this file and load it here
+    // State(QFile *file)
 
     void setGrid(Grid *newGrid) { grid = newGrid; }
     Grid *getGrid() { return grid; }
@@ -32,17 +39,24 @@ public:
 
     void swapFillDirection();
 
+    bool keyPressAction(QKeyEvent *event);
+    Action getAction(QKeyEvent *event) const;
+    bool handleAction(Action action);
+
 private:
     /* The current grid */
     Grid *grid;
 
-    /* Paramters for editing answers */
+    /*
+     * Mapping from key press to action. This can be updated by the user and init'd by file
+     * Different hash maps represent sets of keybinds associated with modifiers (or no modifier)
+     * (e.g. keymap_ctrl_mod for the Qt::ControlModifier)
+     */
+    QHash<Qt::Key, Action> keymap_no_mod;
+    QHash<Qt::Key, Action> keymap_ctrl_mod;
+
     LetterCell *selectedCell; // Cell currently highlighted when not in grid edit mode
     Direction fillDirection = ACROSS; // Direction of highlighting/moving
-
-    /* Parameters for editing grid */
-    // TODO
-
     EditingMode editingMode = LAYOUT;
     QString currentFile;
 };

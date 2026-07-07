@@ -194,26 +194,6 @@ void Grid::switchEditingMode()
     }
 }
 
-void Grid::handleShortcut(QKeyEvent *event)
-{
-    switch (event->key()) {
-        case Qt::Key_M:
-            switchEditingMode();
-            break;
-        case Qt::Key_S:
-            saveToFile();
-            break;
-        case Qt::Key_L:
-            loadFromFile();
-            break;
-        case Qt::Key_D:
-            state->swapFillDirection();
-            break;
-        default:
-            break;
-    }
-}
-
 void Grid::mousePressEvent(QMouseEvent *event)
 {
     if (event->position().x() <= border_line_width || event->position().y() <= border_line_width) return;
@@ -239,22 +219,19 @@ void Grid::mousePressEvent(QMouseEvent *event)
  */
 void Grid::keyPressEvent(QKeyEvent *event)
 {
-    // Process the key press and see if it can be associated with an Action
+    QString text;
+    QChar ch;
 
-
-    // Perform the Action, if any ...
-
-
-    QString text = event->text();
-
-    // Process a shortcut
-    if (event->modifiers() & Qt::ControlModifier) {
-        handleShortcut(event);
+    // Pass the event to the State and retrieve the action
+    if (state->keyPressAction(event)) {
         goto exit;
     }
+
+    // Reached here if no action was performed
     // Process a key press when we are filling the grid
+    text = event->text();
     if (!text.isEmpty() && state->getEditingMode() == FILL) {
-        QChar ch = text.at(0).toUpper();
+        ch = text.at(0).toUpper();
         if (ch.isLetter()) {
             state->getSelectedCell()->setLetter(ch);
             state->selectCell(

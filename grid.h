@@ -34,7 +34,6 @@ public:
     LetterCell *getNextLetter(LetterCell *cell, Direction direction);
     void toggleCell(Cell *cell, bool symmetric);
     void switchEditingMode();
-    void handleShortcut(QKeyEvent *event);
     QString toString();
     void fromString(QString newGrid, int newGridSize);
     void saveToFile();
