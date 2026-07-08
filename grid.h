@@ -4,6 +4,7 @@
 #include <vector>
 #include <QWidget>
 #include "cell.h"
+#include "blackcell.h"
 #include "lettercell.h"
 #include "direction.h"
 #include "word.h"
@@ -19,21 +20,25 @@ class Grid : public QWidget
     Q_OBJECT
 public:
     explicit Grid(QWidget *parent = nullptr, State *stateIn = nullptr, int g = 15, int c = 30);
-
     void resetGrid();
     void destroyGrid();
 
-    void paintEvent(QPaintEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
-
     void drawWords(QPainter *painter);
     void drawBorder(QPainter *painter);
+    void paintEvent(QPaintEvent *event) override;
 
+    void mousePressEvent(QMouseEvent *event) override;
+
+    void enterLetter(QChar ch);
+    void keyPressEvent(QKeyEvent *event) override;
+
+    Cell *getAdjacentCell(Cell *cell, Direction direction);
+    LetterCell *getAdjacentLetterCell(Cell *cell, Direction direction);
+    BlackCell *getAdjacentBlackCell(Cell *cell, Direction direction);
     LetterCell *getFirstLetter();
-    LetterCell *getNextLetter(LetterCell *cell, Direction direction);
+    LetterCell *getNextLetter(LetterCell *cell, WordDirection direction);
     void toggleCell(Cell *cell, bool symmetric);
-    void switchEditingMode();
+    void switchMode();
     QString toString();
     void fromString(QString newGrid, int newGridSize);
     void saveToFile();
@@ -43,9 +48,9 @@ public:
     int getCellSize() const { return cellSize; }
     auto& getCells() { return cells; }
 
-    bool startsWord(LetterCell *cell, Direction direction);
-    struct Word parseWord(LetterCell *cell, Direction direction, int number);
-    int findWord(int x, int y, Direction direction);
+    bool startsWord(LetterCell *cell, WordDirection direction);
+    struct Word parseWord(LetterCell *cell, WordDirection direction, int number);
+    int findWord(int x, int y, WordDirection direction);
     std::vector<LetterCell *> wordToCells(struct Word &word);
     void updateWords();
     void printWord(struct Word &word);

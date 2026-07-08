@@ -24,7 +24,7 @@ enum Action {
     /* Actions associated with the state  */
 
     /// Switches the editing mode from LAYOUT <-> FILL
-    STATE_SWITCH_EDITING_MODE,
+    STATE_SWITCH_MODE,
     /// Swaps the fill direction from ACROSS <-> DOWN
     STATE_SWAP_FILL_DIRECTION,
 

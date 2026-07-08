@@ -9,13 +9,13 @@
 #include "direction.h"
 #include "action.h"
 
-class Grid;
-
-enum EditingMode {
+enum Mode {
     LAYOUT,
     FILL,
-    CLUES
+    CLUE
 };
+
+class Grid;
 
 class State
 {
@@ -30,10 +30,11 @@ public:
     Grid *getGrid() { return grid; }
     void setSelectedCell(LetterCell *cell) { selectedCell = cell; }
     LetterCell *getSelectedCell() { return selectedCell; }
+    void moveAndSelectNewCell(Direction direction);
     void selectCell(Cell *cell);
-    Direction getFillDirection() { return fillDirection; }
-    void setEditingMode(EditingMode mode) { editingMode = mode; }
-    EditingMode getEditingMode() { return editingMode; }
+    WordDirection getFillDirection() { return fillDirection; }
+    void setMode(Mode newMode) { mode = newMode; }
+    Mode getMode() { return mode; }
     void setCurrentFile(QString filename) { currentFile = filename; }
     QString getCurrentFile() { return currentFile; }
 
@@ -55,9 +56,9 @@ private:
     QHash<Qt::Key, Action> keymap_no_mod;
     QHash<Qt::Key, Action> keymap_ctrl_mod;
 
-    LetterCell *selectedCell; // Cell currently highlighted when not in grid edit mode
-    Direction fillDirection = ACROSS; // Direction of highlighting/moving
-    EditingMode editingMode = LAYOUT;
+    LetterCell *selectedCell; // Cell currently selected (letter cell filled when entering in FILL mode)
+    WordDirection fillDirection = ACROSS; // Direction of selected word/direction moved when filled
+    Mode mode = LAYOUT;
     QString currentFile;
 };
 

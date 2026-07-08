@@ -4,7 +4,6 @@
 #include "state.h"
 #include "grid.h"
 #include "action.h"
-#include <iostream>
 
 State::State()
 {
@@ -13,7 +12,7 @@ State::State()
     keymap_no_mod[Qt::Key_Left] = Action::GRID_MOVE_LEFT;
     keymap_no_mod[Qt::Key_Right] = Action::GRID_MOVE_RIGHT;
 
-    keymap_ctrl_mod[Qt::Key_M] = Action::STATE_SWITCH_EDITING_MODE;
+    keymap_ctrl_mod[Qt::Key_M] = Action::STATE_SWITCH_MODE;
     keymap_ctrl_mod[Qt::Key_D] = Action::STATE_SWAP_FILL_DIRECTION;
     keymap_ctrl_mod[Qt::Key_S] = Action::SAVE_TO_FILE;
     keymap_ctrl_mod[Qt::Key_L] = Action::LOAD_FROM_FILE;
@@ -21,10 +20,10 @@ State::State()
 
 void State::swapFillDirection()
 {
-    if (editingMode != EditingMode::FILL) return;
+    if (mode != Mode::FILL) return;
     fillDirection =
-        fillDirection == Direction::ACROSS ? Direction::DOWN :
-                                             Direction::ACROSS;
+        fillDirection == WordDirection::ACROSS ? WordDirection::DOWN :
+                                                 WordDirection::ACROSS;
 }
 
 /**
@@ -37,6 +36,25 @@ void State::selectCell(Cell *cell)
     if (!cell) return;
     LetterCell *letter = dynamic_cast<LetterCell *>(cell);
     if (letter) selectedCell = letter;
+}
+
+/************************************
+   Function associated with actions
+ ************************************/
+
+void State::moveAndSelectNewCell(Direction direction)
+{
+    Cell *cell = grid->getAdjacentCell(selectedCell, direction);
+    if (!cell) return;
+    if ((direction == Direction::ABOVE || direction == Direction::BELOW) &&
+       fillDirection == WordDirection::ACROSS) {
+        fillDirection = WordDirection::DOWN;
+    } else if ((direction == Direction::LEFT || direction == Direction::RIGHT) &&
+       fillDirection == WordDirection::DOWN) {
+        fillDirection = WordDirection::ACROSS;
+    } else {
+        selectCell(cell);
+    }
 }
 
 bool State::keyPressAction(QKeyEvent *event)
@@ -62,23 +80,19 @@ bool State::handleAction(Action action)
 {
     switch (action) {
     case Action::GRID_MOVE_UP:
-        std::cout << "U" << std::endl;
-        return false; // NO IMPLEMENTATION
+        moveAndSelectNewCell(Direction::ABOVE);
         break;
     case Action::GRID_MOVE_DOWN:
-        std::cout << "D" << std::endl;
-        return false; // NO IMPLEMENTATION
+        moveAndSelectNewCell(Direction::BELOW);
         break;
     case Action::GRID_MOVE_LEFT:
-        std::cout << "L" << std::endl;
-        return false; // NO IMPLEMENTATION
+        moveAndSelectNewCell(Direction::LEFT);
         break;
     case Action::GRID_MOVE_RIGHT:
-        std::cout << "R" << std::endl;
-        return false; // NO IMPLEMENTATION
+        moveAndSelectNewCell(Direction::RIGHT);
         break;
-    case Action::STATE_SWITCH_EDITING_MODE:
-        grid->switchEditingMode();
+    case Action::STATE_SWITCH_MODE:
+        grid->switchMode();
         break;
     case Action::STATE_SWAP_FILL_DIRECTION:
         swapFillDirection();
