@@ -30,9 +30,9 @@ public:
     Grid *getGrid() { return grid; }
     void setSelectedCell(LetterCell *cell) { selectedCell = cell; }
     LetterCell *getSelectedCell() { return selectedCell; }
-    void moveAndSelectNewCell(Direction direction);
+    void moveCursor(MoveDirection direction);
     void selectCell(Cell *cell);
-    WordDirection getFillDirection() { return fillDirection; }
+    MoveDirection getMoveDirection() { return fillDirection; }
     void setMode(Mode newMode) { mode = newMode; }
     Mode getMode() { return mode; }
     void setCurrentFile(QString filename) { currentFile = filename; }

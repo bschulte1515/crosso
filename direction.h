@@ -1,17 +1,19 @@
 #ifndef DIRECTION_H
 #define DIRECTION_H
 
-/* Used for describing direction relative to other cells */
-enum Direction {
-    ABOVE,
-    BELOW,
+/* Used for describing movement around the board when using arrow keys */
+enum class MoveDirection {
+    UP,
+    DOWN,
     LEFT,
     RIGHT
 };
 
-/* Used by the state to describe direction of entire words */
-/* Used when entering letters in the grid or describing words/clues */
-enum WordDirection {
+/*
+ * Used by the state to describe direction of entire words and
+ * when entering letters in the grid or describing words/clues.
+ */
+enum class WordDirection {
     ACROSS,
     DOWN
 };

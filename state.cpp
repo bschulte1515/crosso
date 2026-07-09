@@ -42,17 +42,27 @@ void State::selectCell(Cell *cell)
    Function associated with actions
  ************************************/
 
-void State::moveAndSelectNewCell(Direction direction)
+void State::moveCursor(MoveDirection direction)
 {
+    // Don't process movement when not in FILL mode
+    if (mode != Mode::FILL) return;
+
+    // We do not check this return unless we are updating selectCell
     Cell *cell = grid->getAdjacentCell(selectedCell, direction);
-    if (!cell) return;
-    if ((direction == Direction::ABOVE || direction == Direction::BELOW) &&
-       fillDirection == WordDirection::ACROSS) {
-        fillDirection = WordDirection::DOWN;
-    } else if ((direction == Direction::LEFT || direction == Direction::RIGHT) &&
-       fillDirection == WordDirection::DOWN) {
-        fillDirection = WordDirection::ACROSS;
-    } else {
+
+    bool moveVertical =
+        direction == MoveDirection::UP ||
+        direction == MoveDirection::DOWN;
+
+    bool moveHorizontal =
+        direction == MoveDirection::LEFT ||
+        direction == MoveDirection::RIGHT;
+
+    if (moveVertical && fillDirection == WordDirection::ACROSS) {
+        swapFillDirection();
+    } else if (moveHorizontal && fillDirection == WordDirection::DOWN) {
+        swapFillDirection();
+    } else if (cell) {
         selectCell(cell);
     }
 }
@@ -80,16 +90,16 @@ bool State::handleAction(Action action)
 {
     switch (action) {
     case Action::GRID_MOVE_UP:
-        moveAndSelectNewCell(Direction::ABOVE);
+        moveCursor(MoveDirection::UP);
         break;
     case Action::GRID_MOVE_DOWN:
-        moveAndSelectNewCell(Direction::BELOW);
+        moveCursor(MoveDirection::DOWN);
         break;
     case Action::GRID_MOVE_LEFT:
-        moveAndSelectNewCell(Direction::LEFT);
+        moveCursor(MoveDirection::LEFT);
         break;
     case Action::GRID_MOVE_RIGHT:
-        moveAndSelectNewCell(Direction::RIGHT);
+        moveCursor(MoveDirection::RIGHT);
         break;
     case Action::STATE_SWITCH_MODE:
         grid->switchMode();
