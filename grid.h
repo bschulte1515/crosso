@@ -20,7 +20,6 @@ class Grid : public QWidget
     Q_OBJECT
 public:
     explicit Grid(QWidget *parent = nullptr, State *stateIn = nullptr, int g = 15, int c = 30);
-    void resetGrid();
     void destroyGrid();
 
     void drawWords(QPainter *painter);
@@ -28,34 +27,40 @@ public:
     void paintEvent(QPaintEvent *event) override;
 
     void mousePressEvent(QMouseEvent *event) override;
-
     void enterLetter(QChar ch);
     void keyPressEvent(QKeyEvent *event) override;
 
-    Cell *getAdjacentCell(Cell *cell, Direction direction);
-    LetterCell *getAdjacentLetterCell(Cell *cell, Direction direction);
-    BlackCell *getAdjacentBlackCell(Cell *cell, Direction direction);
+    static Cell *getAdjacentCell(Cell *cell, MoveDirection direction);
+    static LetterCell *getAdjacentLetterCell(Cell *cell, MoveDirection direction);
+    static BlackCell *getAdjacentBlackCell(Cell *cell, MoveDirection direction);
     LetterCell *getFirstLetter();
     LetterCell *getNextLetter(LetterCell *cell, WordDirection direction);
-    void toggleCell(Cell *cell, bool symmetric);
-    void switchMode();
-    QString toString();
-    void fromString(QString newGrid, int newGridSize);
-    void saveToFile();
-    void loadFromFile();
-    int getSize() const { return size; }
-    void setSize(int newSize) { size = newSize; }
-    int getCellSize() const { return cellSize; }
-    auto& getCells() { return cells; }
 
     bool startsWord(LetterCell *cell, WordDirection direction);
     struct Word parseWord(LetterCell *cell, WordDirection direction, int number);
     int findWord(int x, int y, WordDirection direction);
-    std::vector<LetterCell *> wordToCells(struct Word &word);
-    void updateWords();
-    void printWord(struct Word &word);
+    static std::vector<LetterCell *> wordToCells(struct Word &word);
+    void refreshWords();
+    static void printWord(struct Word &word);
     void printWords();
 
+    void enterFillMode();
+    void toggleCell(Cell *cell, bool symmetric);
+    void switchActiveMode();
+    QString toString();
+    void fromString(QString newGrid, int newGridSize);
+    void saveToFile();
+    void loadFromFile();
+
+    /* Getters */
+    auto& getCells() { return cells; }
+    int getSize() const { return size; }
+    int getCellSize() const { return cellSize; }
+
+    /* Setters */
+    void setSize(int newSize) { size = newSize; }
+
+    /* Constants for drawing the grid */
     static constexpr int inner_line_width = 1;
     static constexpr int border_line_width = 2;
     static constexpr int letter_font_size = 14;

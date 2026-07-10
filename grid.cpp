@@ -29,8 +29,8 @@ Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
         }
         cells.push_back(row);
     }
-    resetGrid();
-
+    state->setActiveMode(Mode::LAYOUT);
+    state->setActiveDirection(WordDirection::ACROSS);
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
 }
@@ -45,21 +45,9 @@ void Grid::destroyGrid()
     cells.clear();
 }
 
-void Grid::resetGrid()
-{
-    updateWords();
-    LetterCell *firstLetter = getFirstLetter();
-    assert(firstLetter != NULL);
-    state->selectCell(firstLetter);
-}
 
-/**
- * @brief Draw each word (i.e. clue numbers) and highlight selected word/cell
- * @param painter
- */
 void Grid::drawWords(QPainter *painter)
 {
-    LetterCell *selected = state->getSelectedCell();
     painter->fillRect(selected->toRect(), SELECTED_COLOR);
     selected->drawLetter(painter, Qt::white); // Replace highlighted letters with white
 
@@ -194,6 +182,10 @@ BlackCell *Grid::getAdjacentBlackCell(Cell *cell, Direction direction)
     return dynamic_cast<BlackCell *>(getAdjacentCell(cell, direction));
 }
 
+void Grid::enterFillMode()
+{
+}
+
 void Grid::toggleCell(Cell *cell, bool symmetric)
 {
     bool wasBlack = cell->isBlack();
@@ -218,20 +210,6 @@ void Grid::toggleCell(Cell *cell, bool symmetric)
 
 void Grid::switchMode()
 {
-    switch(state->getMode()) {
-    case Mode::LAYOUT: {
-        state->setMode(Mode::FILL);
-        resetGrid();
-        break;
-    }
-    case Mode::FILL: {
-        state->setMode(Mode::LAYOUT);
-        break;
-    }
-    case Mode::CLUE:
-    default:
-        break;
-    }
 }
 
 void Grid::mousePressEvent(QMouseEvent *event)
@@ -498,13 +476,7 @@ std::vector<LetterCell *> Grid::wordToCells(struct Word &word)
     return wordAsVector;
 }
 
-/**
- * @brief Grid::updateWords      Parses the grid into words, first across then down
- *
- * Called everytime there is an update to the grid. For right now this should only be when switching
- * from LAYOUT -> FILL mode, or after initalizing the grid (regularly or fromString)
- */
-void Grid::updateWords()
+void Grid::refreshWords()
 {
     int clueNumber = 1;
     bool wordParsed = false;

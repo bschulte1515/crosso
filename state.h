@@ -5,10 +5,16 @@
 #include <QHash>
 #include <QKeyEvent>
 
-#include "lettercell.h"
+#include "cell.h"
 #include "direction.h"
 #include "action.h"
 
+/*
+ * Modes pertaining to editing the crossword
+ * - LAYOUT: Edit the layout of the grid (i.e. the pattern of the black cells)
+ * - FILL: Input the letters into the letter cells/words
+ * - CLUES: Write clues for the words
+ */
 enum Mode {
     LAYOUT,
     FILL,
@@ -26,23 +32,62 @@ public:
     /// to a config file. When starting up, we would find this file and load it here
     // State(QFile *file)
 
-    void setGrid(Grid *newGrid) { grid = newGrid; }
-    Grid *getGrid() { return grid; }
-    void setSelectedCell(LetterCell *cell) { selectedCell = cell; }
-    LetterCell *getSelectedCell() { return selectedCell; }
+    /**
+     * @brief keyPressAction	Handle for a key press passed on by the grid
+     * @param event 			The key press event
+     * @return					Result of the action performed as a result of the event
+     */
+    bool keyPressAction(QKeyEvent *event);
+
+    /**
+     * @brief getAction		Translate an event to an action
+     * @param event 		The key press event
+     * @return 				The action produced by the event
+     */
+    Action getAction(QKeyEvent *event) const;
+
+    /**
+     * @brief handleAction		Handles an action
+     * @param action 			The action to process
+     * @return					Result of handled action. False indicates failure
+     */
+    bool handleAction(Action action);
+
+    /**
+     * @brief moveCursor	Moves the cursor over one cell
+     * @param direction 	The direction to move the cursor
+     */
     void moveCursor(MoveDirection direction);
-    void selectCell(Cell *cell);
-    MoveDirection getMoveDirection() { return fillDirection; }
-    void setMode(Mode newMode) { mode = newMode; }
-    Mode getMode() { return mode; }
-    void setCurrentFile(QString filename) { currentFile = filename; }
+
+    /**
+     * @brief        Moves the cursor to any cell
+     * @param x      The x-coordinate of the cell to move to
+     * @param y	     The y-coordinate of the cell to move to
+     */
+    void moveCursor(int x, int y);
+
+    /**
+     * @brief     Toggles the direction we are "actively" filling
+     */
+    void toggleActiveDirection(void);
+
+    /**
+     * @brief     Toggles the mode we are "actively" in
+     */
+    void toggleActiveMode(void);
+
+    /* Getters */
+    Grid *getGrid() { return grid; }
+    Cell *getCursor() { return cursor; }
+    WordDirection getActiveDirection() { return activeDirection; }
+    Mode getActiveMode() { return activeMode; }
     QString getCurrentFile() { return currentFile; }
 
-    void swapFillDirection();
-
-    bool keyPressAction(QKeyEvent *event);
-    Action getAction(QKeyEvent *event) const;
-    bool handleAction(Action action);
+    /* Setters */
+    void setGrid(Grid *newGrid) { grid = newGrid; }
+    void setActiveDirection(WordDirection direction) { activeDirection = direction; }
+    void setActiveMode(Mode mode);
+    void setCurrentFile(QString filename) { currentFile = filename; }
 
 private:
     /* The current grid */
@@ -55,10 +100,17 @@ private:
      */
     QHash<Qt::Key, Action> keymap_no_mod;
     QHash<Qt::Key, Action> keymap_ctrl_mod;
+    QHash<Qt::Key, Action> keymap_alt_mod;
+    QHash<Qt::Key, Action> keymap_shift_mod;
+    QHash<Qt::Key, Action> keymap_meta_mod;
 
-    LetterCell *selectedCell; // Cell currently selected (letter cell filled when entering in FILL mode)
-    WordDirection fillDirection = ACROSS; // Direction of selected word/direction moved when filled
-    Mode mode = LAYOUT;
+    /* Cell that is currently selected by the "cursor". Will always be in the seleceted word */
+    Cell *cursor;
+
+    /* Direction the cursor will move when a letter is entered/deleted */
+    WordDirection activeDirection = WordDirection::ACROSS;
+    Mode activeMode = Mode::LAYOUT;
+
     QString currentFile;
 };
 

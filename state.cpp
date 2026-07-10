@@ -13,58 +13,9 @@ State::State()
     keymap_no_mod[Qt::Key_Right] = Action::GRID_MOVE_RIGHT;
 
     keymap_ctrl_mod[Qt::Key_M] = Action::STATE_SWITCH_MODE;
-    keymap_ctrl_mod[Qt::Key_D] = Action::STATE_SWAP_FILL_DIRECTION;
+    keymap_ctrl_mod[Qt::Key_D] = Action::STATE_TOGGLE_ACTIVE_DIRECTION;
     keymap_ctrl_mod[Qt::Key_S] = Action::SAVE_TO_FILE;
     keymap_ctrl_mod[Qt::Key_L] = Action::LOAD_FROM_FILE;
-}
-
-void State::swapFillDirection()
-{
-    if (mode != Mode::FILL) return;
-    fillDirection =
-        fillDirection == WordDirection::ACROSS ? WordDirection::DOWN :
-                                                 WordDirection::ACROSS;
-}
-
-/**
- * @brief Attempts to set the selected cell
- * @note Will not update selected cell if @p cell is not a LETTER
- * @param cell
- */
-void State::selectCell(Cell *cell)
-{
-    if (!cell) return;
-    LetterCell *letter = dynamic_cast<LetterCell *>(cell);
-    if (letter) selectedCell = letter;
-}
-
-/************************************
-   Function associated with actions
- ************************************/
-
-void State::moveCursor(MoveDirection direction)
-{
-    // Don't process movement when not in FILL mode
-    if (mode != Mode::FILL) return;
-
-    // We do not check this return unless we are updating selectCell
-    Cell *cell = grid->getAdjacentCell(selectedCell, direction);
-
-    bool moveVertical =
-        direction == MoveDirection::UP ||
-        direction == MoveDirection::DOWN;
-
-    bool moveHorizontal =
-        direction == MoveDirection::LEFT ||
-        direction == MoveDirection::RIGHT;
-
-    if (moveVertical && fillDirection == WordDirection::ACROSS) {
-        swapFillDirection();
-    } else if (moveHorizontal && fillDirection == WordDirection::DOWN) {
-        swapFillDirection();
-    } else if (cell) {
-        selectCell(cell);
-    }
 }
 
 bool State::keyPressAction(QKeyEvent *event)
@@ -104,8 +55,8 @@ bool State::handleAction(Action action)
     case Action::STATE_SWITCH_MODE:
         grid->switchMode();
         break;
-    case Action::STATE_SWAP_FILL_DIRECTION:
-        swapFillDirection();
+    case Action::STATE_TOGGLE_ACTIVE_DIRECTION:
+        toggleActiveDirection();
         break;
     case Action::SAVE_TO_FILE:
         grid->saveToFile();
@@ -118,4 +69,80 @@ bool State::handleAction(Action action)
         return false;
     }
     return true;
+}
+
+void State::moveCursor(MoveDirection direction)
+{
+    Cell *cell = nullptr;
+
+    bool moveVertical =
+        direction == MoveDirection::UP ||
+        direction == MoveDirection::DOWN;
+
+    bool moveHorizontal =
+        direction == MoveDirection::LEFT ||
+        direction == MoveDirection::RIGHT;
+
+    if (moveVertical && activeDirection == WordDirection::ACROSS) {
+        toggleActiveDirection();
+        return;
+    } else if (moveHorizontal && activeDirection == WordDirection::DOWN) {
+        toggleActiveDirection();
+        return;
+    }
+
+    cell = grid->getAdjacentCell(cursor, direction);
+    if (!cell) return;
+    moveCursor(cell->getX(), cell->getY());
+}
+
+void State::moveCursor(int x, int y)
+{
+    LetterCell *letter = nullptr;
+    Cell *cell = grid->getCells()[x][y];
+    if (!cell) return;
+
+    // If in LAYOUT, cursor can point to any cell. However,
+    // in FILL, cursor can ~only~ point to a letter cell.
+    if (activeMode == Mode::LAYOUT) {
+        cursor = cell;
+    } else if (activeMode == Mode::FILL && !cell->isBlack()) {
+        letter = dynamic_cast<LetterCell *>(cell);
+        assert(letter != nullptr);
+        cursor = letter;
+    }
+}
+
+void State::toggleActiveDirection()
+{
+    if (activeMode != Mode::FILL) return;
+    if (activeDirection == WordDirection::ACROSS) {
+        activeDirection = WordDirection::DOWN;
+    } else {
+        activeDirection = WordDirection::ACROSS;
+    }
+}
+
+void State::toggleActiveMode()
+{
+    if (activeMode == Mode::LAYOUT) {
+        setActiveMode(Mode::FILL);
+    } else if (activeMode == Mode::FILL) {
+        setActiveMode(Mode::LAYOUT);
+    }
+}
+
+void State::setActiveMode(Mode newMode)
+{
+    LetterCell *letter = nullptr;
+
+    if (newMode == Mode::LAYOUT) {
+        grid->refreshWords();
+        letter = grid->getFirstLetter();
+        assert(letter != NULL);
+        moveCursor(letter->getX(), letter->getY());
+    } else if (newMode == Mode::FILL) {
+        moveCursor(0, 0);
+    }
+    activeMode = newMode;
 }
