@@ -57,6 +57,12 @@ public:
      * @brief moveCursor	Moves the cursor over one cell
      * @param direction 	The direction to move the cursor
      */
+    void moveCursor(WordDirection direction);
+
+    /**
+     * @brief moveCursor	Moves the cursor over one cell
+     * @param direction 	The direction to move the cursor
+     */
     void moveCursor(MoveDirection direction);
 
     /**

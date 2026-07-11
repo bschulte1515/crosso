@@ -1,6 +1,10 @@
 #ifndef DIRECTION_H
 #define DIRECTION_H
 
+#define OPPOSITE_DIRECTION(direction) 							   \
+        direction == WordDirection::ACROSS ? WordDirection::DOWN : \
+                                             WordDirection::ACROSS
+
 /* Used for describing movement around the board when using arrow keys */
 enum class MoveDirection {
     UP,

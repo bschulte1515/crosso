@@ -30,21 +30,21 @@ public:
     void enterLetter(QChar ch);
     void keyPressEvent(QKeyEvent *event) override;
 
-    static Cell *getAdjacentCell(Cell *cell, MoveDirection direction);
-    static LetterCell *getAdjacentLetterCell(Cell *cell, MoveDirection direction);
-    static BlackCell *getAdjacentBlackCell(Cell *cell, MoveDirection direction);
+    Cell *getAdjacentCell(Cell *cell, WordDirection direction);
+    Cell *getAdjacentCell(Cell *cell, MoveDirection direction);
+    LetterCell *getAdjacentLetterCell(Cell *cell, MoveDirection direction);
+    BlackCell *getAdjacentBlackCell(Cell *cell, MoveDirection direction);
     LetterCell *getFirstLetter();
     LetterCell *getNextLetter(LetterCell *cell, WordDirection direction);
 
     bool startsWord(LetterCell *cell, WordDirection direction);
     struct Word parseWord(LetterCell *cell, WordDirection direction, int number);
     int findWord(int x, int y, WordDirection direction);
-    static std::vector<LetterCell *> wordToCells(struct Word &word);
+    std::vector<LetterCell *> wordToCells(struct Word &word);
     void refreshWords();
-    static void printWord(struct Word &word);
+    void printWord(struct Word &word);
     void printWords();
 
-    void enterFillMode();
     void toggleCell(Cell *cell, bool symmetric);
     void switchActiveMode();
     QString toString();

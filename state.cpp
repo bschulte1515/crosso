@@ -53,7 +53,7 @@ bool State::handleAction(Action action)
         moveCursor(MoveDirection::RIGHT);
         break;
     case Action::STATE_SWITCH_MODE:
-        grid->switchMode();
+        toggleActiveMode();
         break;
     case Action::STATE_TOGGLE_ACTIVE_DIRECTION:
         toggleActiveDirection();
@@ -71,8 +71,19 @@ bool State::handleAction(Action action)
     return true;
 }
 
+void State::moveCursor(WordDirection direction)
+{
+    if (direction == WordDirection::ACROSS) {
+        moveCursor(MoveDirection::RIGHT);
+    } else if (direction == WordDirection::DOWN) {
+        moveCursor(MoveDirection::RIGHT);
+    }
+}
+
 void State::moveCursor(MoveDirection direction)
 {
+    /* Note that this will eventually check that the cell is valid based
+     * on the active mode. So this doesn't need any pre-checks. */
     Cell *cell = nullptr;
 
     bool moveVertical =
