@@ -46,6 +46,8 @@ public:
     int findWord(int x, int y, WordDirection direction);
     std::vector<LetterCell *> wordToCells(struct Word &word);
     void refreshWords();
+    Word &getNextWord(int wordIndex);
+    Word &getPreviousWord(int wordIndex);
     void printWord(struct Word &word);
     void printWords();
 

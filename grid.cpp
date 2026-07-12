@@ -559,7 +559,37 @@ void Grid::refreshWords()
     }
 }
 
-void Grid::getNextWord(Word
+Word &Grid::getNextWord(int wordIndex)
+{
+    Word &word = words[wordIndex];
+    Word &currentWord = word;
+
+    /* Try each index in the words vector to see if it is next word */
+    for (size_t i = 1; i < words.size(); i++) {
+        currentWord = words[(i + wordIndex) % words.size()];
+        if (currentWord.direction == word.direction) {
+            return currentWord;
+        }
+    }
+    return word;
+}
+
+Word &Grid::getPreviousWord(int wordIndex)
+{
+    Word &word = words[wordIndex];
+    Word &currentWord = word;
+    int i = 0;
+
+    /* Try each index in the words vector to see if it is previous word */
+    i = wordIndex;
+    while (true) {
+        currentWord = words[(i + wordIndex) % words.size()];
+        if (currentWord.direction == word.direction) {
+            return currentWord;
+        }
+    }
+    return word;
+}
 
 void Grid::printWord(struct Word &word)
 {
