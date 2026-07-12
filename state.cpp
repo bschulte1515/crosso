@@ -13,6 +13,8 @@ State::State()
     keymap_no_mod[Qt::Key_Right] = Action::GRID_MOVE_RIGHT;
     keymap_no_mod[Qt::Key_Backspace] = Action::GRID_REMOVE_LETTER;
 
+    keymap_ctrl_mod[Qt::Key_Left] = Action::GRID_GOTO_NEXT_WORD;
+    keymap_ctrl_mod[Qt::Key_Right] = Action::GRID_GOTO_PREVIOUS_WORD;
     keymap_ctrl_mod[Qt::Key_M] = Action::STATE_SWITCH_MODE;
     keymap_ctrl_mod[Qt::Key_D] = Action::STATE_TOGGLE_ACTIVE_DIRECTION;
     keymap_ctrl_mod[Qt::Key_S] = Action::SAVE_TO_FILE;
@@ -55,6 +57,12 @@ bool State::handleAction(Action action)
         break;
     case Action::GRID_REMOVE_LETTER:
         grid->removeLetter();
+        break;
+    case Action::GRID_GOTO_NEXT_WORD:
+        moveCursorToNextWord();
+        break;
+    case Action::GRID_GOTO_PREVIOUS_WORD:
+        moveCursorToPreviousWord();
         break;
     case Action::STATE_SWITCH_MODE:
         toggleActiveMode();
@@ -147,6 +155,18 @@ void State::moveCursor(int x, int y)
     }
 }
 
+void State::moveCursorToNextWord()
+{
+    int wordIndex = getActiveWord();
+
+    // Loop through the words and find the next word in the same direction
+}
+
+void State::moveCursorToPreviousWord()
+{
+    int wordIndex = getActiveWord();
+}
+
 void State::toggleActiveDirection()
 {
     if (activeMode != Mode::FILL) return;
@@ -166,6 +186,27 @@ void State::toggleActiveMode()
     }
 }
 
+/**
+ * @brief
+ *
+ * @invariant There MUST be a valid active word so we assert that the index cannot be -1
+ *
+ * @return
+ */
+int State::getActiveWord()
+{
+    int ret = 0;
+
+    ret = grid->findWord(cursor->getX(), cursor->getY(), activeDirection);
+    assert(ret != -1);
+
+    return ret;
+}
+
+/**
+ * @brief State::setActiveMode
+ * @param newMode
+ */
 void State::setActiveMode(Mode newMode)
 {
     LetterCell *letter = nullptr;

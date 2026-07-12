@@ -487,6 +487,14 @@ struct Word Grid::parseWord(LetterCell *cell, WordDirection direction, int numbe
     return newWord;
 }
 
+/**
+ * @brief Attempts to find a word that has the given coorindate and direction
+ *
+ * @param x				The x-coordinate of the word to find
+ * @param y    		    The y-coordinate of the word to find
+ * @param direction     The direction of the word to find
+ * @return				The index of the word or -1 if the word was not found
+ */
 int Grid::findWord(int x, int y, WordDirection direction)
 {
     for (unsigned int i = 0; i < words.size(); i++) {
@@ -550,6 +558,8 @@ void Grid::refreshWords()
         }
     }
 }
+
+void Grid::getNextWord(Word
 
 void Grid::printWord(struct Word &word)
 {

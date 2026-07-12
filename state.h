@@ -67,6 +67,16 @@ public:
     void moveCursor(MoveDirection direction);
 
     /**
+     * @brief moveCursorToNextWord
+     */
+    void moveCursorToNextWord();
+
+    /**
+     * @brief moveCursorToPreviousWord
+     */
+    void moveCursorToPreviousWord();
+
+    /**
      * @brief        Moves the cursor to any cell
      * @param x      The x-coordinate of the cell to move to
      * @param y	     The y-coordinate of the cell to move to
@@ -88,6 +98,7 @@ public:
     Cell *getCursor() { return cursor; }
     WordDirection getActiveDirection() { return activeDirection; }
     Mode getActiveMode() { return activeMode; }
+    int getActiveWord(void);
     QString getCurrentFile() { return currentFile; }
 
     /* Setters */

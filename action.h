@@ -16,6 +16,10 @@ enum Action {
     GRID_MOVE_RIGHT,
     /// Remove the letter from the current letter cell and move back
     GRID_REMOVE_LETTER,
+    /// Go to the next word in the grid in the active direction
+    GRID_GOTO_NEXT_WORD,
+    /// Go to the previous word in the grid in the active direction
+    GRID_GOTO_PREVIOUS_WORD,
 
     /* __________________________________ */
 
