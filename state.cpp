@@ -11,6 +11,7 @@ State::State()
     keymap_no_mod[Qt::Key_Down] = Action::GRID_MOVE_DOWN;
     keymap_no_mod[Qt::Key_Left] = Action::GRID_MOVE_LEFT;
     keymap_no_mod[Qt::Key_Right] = Action::GRID_MOVE_RIGHT;
+    keymap_no_mod[Qt::Key_Backspace] = Action::GRID_REMOVE_LETTER;
 
     keymap_ctrl_mod[Qt::Key_M] = Action::STATE_SWITCH_MODE;
     keymap_ctrl_mod[Qt::Key_D] = Action::STATE_TOGGLE_ACTIVE_DIRECTION;
@@ -52,6 +53,9 @@ bool State::handleAction(Action action)
     case Action::GRID_MOVE_RIGHT:
         moveCursor(MoveDirection::RIGHT);
         break;
+    case Action::GRID_REMOVE_LETTER:
+        grid->removeLetter();
+        break;
     case Action::STATE_SWITCH_MODE:
         toggleActiveMode();
         break;
@@ -71,19 +75,38 @@ bool State::handleAction(Action action)
     return true;
 }
 
-void State::moveCursor(WordDirection direction)
+/**
+ * @brief Move cursor in a ~word~ direction
+ *
+ * @note This particular function is used when entering or removing letters
+ * 		 and thus active direction should not change.
+ *
+ * @param direction 	The direction to move in
+ * @param reverse		Reverse the direction of movement (i.e. move backwards)
+ */
+void State::moveCursor(WordDirection direction, bool reverse)
 {
-    if (direction == WordDirection::ACROSS) {
+    if (direction == WordDirection::ACROSS && !reverse) {
         moveCursor(MoveDirection::RIGHT);
-    } else if (direction == WordDirection::DOWN) {
-        moveCursor(MoveDirection::RIGHT);
+    } else if (direction == WordDirection::ACROSS && reverse) {
+        moveCursor(MoveDirection::LEFT);
+    } else if (direction == WordDirection::DOWN && !reverse) {
+        moveCursor(MoveDirection::DOWN);
+    } else if (direction == WordDirection::DOWN && reverse) {
+        moveCursor(MoveDirection::UP);
     }
 }
 
+/**
+ * @brief Move cursor in a direction
+ *
+ * @note This particular function is used when moving around the board with
+ *  	 (typically) arrow keys, so the active direction can be changed
+ *
+ * @param direction 	The direction to move in
+ */
 void State::moveCursor(MoveDirection direction)
 {
-    /* Note that this will eventually check that the cell is valid based
-     * on the active mode. So this doesn't need any pre-checks. */
     Cell *cell = nullptr;
 
     bool moveVertical =
@@ -110,7 +133,7 @@ void State::moveCursor(MoveDirection direction)
 void State::moveCursor(int x, int y)
 {
     LetterCell *letter = nullptr;
-    Cell *cell = grid->getCells()[x][y];
+    Cell *cell = grid->getCell(x, y);
     if (!cell) return;
 
     // If in LAYOUT, cursor can point to any cell. However,
@@ -148,12 +171,12 @@ void State::setActiveMode(Mode newMode)
     LetterCell *letter = nullptr;
 
     if (newMode == Mode::LAYOUT) {
+        // moveCursor(0, 0);
+    } else if (newMode == Mode::FILL) {
         grid->refreshWords();
         letter = grid->getFirstLetter();
         assert(letter != NULL);
         moveCursor(letter->getX(), letter->getY());
-    } else if (newMode == Mode::FILL) {
-        moveCursor(0, 0);
     }
     activeMode = newMode;
 }

@@ -14,6 +14,8 @@ enum Action {
     GRID_MOVE_LEFT,
     /// Move to the next cell to the right (if possible) in the grid
     GRID_MOVE_RIGHT,
+    /// Remove the letter from the current letter cell and move back
+    GRID_REMOVE_LETTER,
 
     /* __________________________________ */
 

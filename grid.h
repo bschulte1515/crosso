@@ -26,10 +26,14 @@ public:
     void drawBorder(QPainter *painter);
     void paintEvent(QPaintEvent *event) override;
 
-    void mousePressEvent(QMouseEvent *event) override;
     void enterLetter(QChar ch);
+    void removeLetter();
     void keyPressEvent(QKeyEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
+    Cell *getCell(int x, int y);
+    LetterCell *getLetterCell(int x, int y);
+    BlackCell *getBlackCell(int x, int y);
     Cell *getAdjacentCell(Cell *cell, WordDirection direction);
     Cell *getAdjacentCell(Cell *cell, MoveDirection direction);
     LetterCell *getAdjacentLetterCell(Cell *cell, MoveDirection direction);

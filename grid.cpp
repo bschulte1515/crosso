@@ -25,10 +25,11 @@ Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
     for (int i = 0; i < size; i++) {
         std::vector<Cell*> row;
         for (int j = 0; j < size; j++) {
-            row.push_back(new LetterCell(i, j, cellSize, ' '));
+            row.push_back(new LetterCell(i, j, cellSize, EMPTY_LETTER));
         }
         cells.push_back(row);
     }
+
     state->setActiveMode(Mode::LAYOUT);
     state->setActiveDirection(WordDirection::ACROSS);
     setFocusPolicy(Qt::StrongFocus);
@@ -149,12 +150,40 @@ void Grid::paintEvent(QPaintEvent *event)
     }
 }
 
+/**
+ * @brief Attempts to get the cell at the given coordinate
+ *
+ * @note Callers do NOT need to do bounds checking prior to calling this function.
+ * 		  The bounds checking is done in this function. They should just check the return
+ *
+ * @param x 	The x coordinate of the cell to return
+ * @param y 	The y coordinate of the cell to return
+ * @return		The cell at the coordinate, or a nullptr if the coordinate is OOB
+ */
+Cell *Grid::getCell(int x, int y)
+{
+    if (x < 0 || x >= size || y < 0 || y >= size) {
+        return nullptr;
+    }
+    return cells[x][y];
+}
+
+LetterCell *Grid::getLetterCell(int x, int y)
+{
+    return dynamic_cast<LetterCell *>(getCell(x, y));
+}
+
+BlackCell *Grid::getBlackCell(int x, int y)
+{
+    return dynamic_cast<BlackCell *>(getCell(x, y));
+}
+
 Cell *Grid::getAdjacentCell(Cell *cell, WordDirection direction)
 {
     if (direction == WordDirection::ACROSS) {
         return getAdjacentCell(cell, MoveDirection::RIGHT);
     } else if (direction == WordDirection::DOWN) {
-        return getAdjacentCell(cell, MoveDirection::RIGHT);
+        return getAdjacentCell(cell, MoveDirection::DOWN);
     } else {
         return nullptr;
     }
@@ -162,30 +191,21 @@ Cell *Grid::getAdjacentCell(Cell *cell, WordDirection direction)
 
 Cell *Grid::getAdjacentCell(Cell *cell, MoveDirection direction)
 {
-    int oldX = cell->getX();
-    int oldY = cell->getY();
-    int deltaX = 0;
-    int deltaY = 0;
+    int x = cell->getX();
+    int y = cell->getY();
 
     switch (direction) {
     case MoveDirection::UP:
-        deltaY = !(oldY == 0) ? -1 : 0;
-        break;
+        return getCell(x, y - 1);
     case MoveDirection::DOWN:
-        deltaY = !(oldY == size - 1) ? 1 : 0;
-        break;
+        return getCell(x, y + 1);
     case MoveDirection::LEFT:
-        deltaX = !(oldX == 0) ? -1 : 0;
-        break;
+        return getCell(x - 1, y);
     case MoveDirection::RIGHT:
-        deltaX = !(oldX == size - 1) ? 1 : 0;
-        break;
+        return getCell(x + 1, y);
     default:
         return nullptr;
     }
-
-    if (deltaX == 0 && deltaY == 0) return NULL;
-    return (cells[oldX + deltaX][oldY + deltaY]);
 }
 
 LetterCell *Grid::getAdjacentLetterCell(Cell *cell, MoveDirection direction)
@@ -220,33 +240,31 @@ void Grid::toggleCell(Cell *cell, bool symmetric)
     }
 }
 
-void Grid::mousePressEvent(QMouseEvent *event)
-{
-    Cell *cell = nullptr;
-    bool symmetricGrid = true;
-
-    if (event->position().x() <= border_line_width || event->position().y() <= border_line_width) return;
-    int x = (event->position().x() - border_line_width) / (cellSize + inner_line_width);
-    int y = (event->position().y() - border_line_width) / (cellSize + inner_line_width);
-    if (x >= size || y >= size) return;
-
-    if (state->getActiveMode() == Mode::LAYOUT) {
-        cell = cells[x][y];
-        toggleCell(cell, symmetricGrid);
-    } else {
-        state->moveCursor(x, y);
-    }
-
-    update();
-}
-
 void Grid::enterLetter(QChar ch)
 {
     LetterCell *cursor = dynamic_cast<LetterCell *>(state->getCursor());
     if (!cursor) return;
 
     cursor->setLetter(ch.toUpper());
-    state->moveCursor(state->getActiveDirection());
+    state->moveCursor(state->getActiveDirection(), false);
+}
+
+void Grid::removeLetter()
+{
+    if (state->getActiveMode() != Mode::FILL) return;
+    LetterCell *cursor = dynamic_cast<LetterCell *>(state->getCursor());
+    if (!cursor) return;
+
+    /* Only move the cursor back if the next cell is also a letter or this cell is empty */
+    if (getNextLetter(cursor, state->getActiveDirection()) ||
+        cursor->getLetter() == EMPTY_LETTER)
+    {
+        state->moveCursor(state->getActiveDirection(), true);
+        cursor = dynamic_cast<LetterCell *>(state->getCursor());
+        if (!cursor) return;
+    }
+
+    cursor->setLetter(EMPTY_LETTER);
 }
 
 /**
@@ -276,6 +294,26 @@ void Grid::keyPressEvent(QKeyEvent *event)
     }
 
 exit:
+    update();
+}
+
+void Grid::mousePressEvent(QMouseEvent *event)
+{
+    Cell *cell = nullptr;
+    bool symmetricGrid = true;
+
+    if (event->position().x() <= border_line_width || event->position().y() <= border_line_width) return;
+    int x = (event->position().x() - border_line_width) / (cellSize + inner_line_width);
+    int y = (event->position().y() - border_line_width) / (cellSize + inner_line_width);
+    if (x >= size || y >= size) return;
+
+    if (state->getActiveMode() == Mode::LAYOUT) {
+        cell = cells[x][y];
+        toggleCell(cell, symmetricGrid);
+    } else {
+        state->moveCursor(x, y);
+    }
+
     update();
 }
 
@@ -518,8 +556,8 @@ void Grid::printWord(struct Word &word)
     QChar ch;
     for (auto &cell : wordToCells(word)) {
         ch = cell->getLetter();
-        if (ch == (QChar)' ') {
-            std::cout << '_';
+        if (ch == (QChar)EMPTY_LETTER) {
+            std::cout << EMPTY_LETTER;
         } else {
             std::cout << ch.toLatin1();
         }

@@ -56,8 +56,9 @@ public:
     /**
      * @brief moveCursor	Moves the cursor over one cell
      * @param direction 	The direction to move the cursor
+     * @param reverse		Move backwards along the direction
      */
-    void moveCursor(WordDirection direction);
+    void moveCursor(WordDirection direction, bool reverse);
 
     /**
      * @brief moveCursor	Moves the cursor over one cell
