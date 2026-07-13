@@ -3,6 +3,8 @@
 
 #include "cell.h"
 
+#define EMPTY_LETTER ' '
+
 class LetterCell : public Cell
 {
 public:
@@ -16,7 +18,7 @@ public:
     void setLetter(QChar ch) { letter = ch; }
     virtual void print() override;
 private:
-    QChar letter = ' ';
+    QChar letter = EMPTY_LETTER;
 };
 
 #endif // LETTERCELL_H

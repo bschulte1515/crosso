@@ -1,0 +1,57 @@
+#ifndef ACTION_H
+#define ACTION_H
+
+enum Action {
+
+    /* -------------------------------- */
+    /* Actions associated with the grid */
+
+    /// Move to the next cell above (if possible) in the grid
+    GRID_MOVE_UP,
+    /// Move to the next cell below (if possible) in the grid
+    GRID_MOVE_DOWN,
+    /// Move to the next cell to the left (if possible) in the grid
+    GRID_MOVE_LEFT,
+    /// Move to the next cell to the right (if possible) in the grid
+    GRID_MOVE_RIGHT,
+    /// Remove the letter from the current letter cell and move back
+    GRID_REMOVE_LETTER,
+    /// Go to the next word in the grid in the active direction
+    GRID_GOTO_NEXT_WORD,
+    /// Go to the previous word in the grid in the active direction
+    GRID_GOTO_PREVIOUS_WORD,
+
+    /* __________________________________ */
+
+
+
+
+    /* ---------------------------------- */
+    /* Actions associated with the state  */
+
+    /// Switches the editing mode from LAYOUT <-> FILL
+    STATE_SWITCH_MODE,
+    /// Flips the active direction from ACROSS <-> DOWN
+    STATE_TOGGLE_ACTIVE_DIRECTION,
+
+    /* __________________________________ */
+
+
+
+
+
+    /* ---------------------------------- */
+    /*  	    	Other actions  	      */
+
+    /// Opens a prompt for a filename to save the current grid to
+    SAVE_TO_FILE,
+    /// Opens a prompt for a file to load a grid from
+    LOAD_FROM_FILE,
+    /// Placeholder for there being no action to take
+    NO_ACTION
+
+    /* __________________________________ */
+};
+
+
+#endif // ACTION_H

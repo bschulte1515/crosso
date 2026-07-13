@@ -4,6 +4,7 @@
 #include <vector>
 #include <QWidget>
 #include "cell.h"
+#include "blackcell.h"
 #include "lettercell.h"
 #include "direction.h"
 #include "word.h"
@@ -19,39 +20,53 @@ class Grid : public QWidget
     Q_OBJECT
 public:
     explicit Grid(QWidget *parent = nullptr, State *stateIn = nullptr, int g = 15, int c = 30);
-
-    void resetGrid();
     void destroyGrid();
-
-    void paintEvent(QPaintEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
 
     void drawWords(QPainter *painter);
     void drawBorder(QPainter *painter);
+    void paintEvent(QPaintEvent *event) override;
 
+    void enterLetter(QChar ch);
+    void removeLetter();
+    void keyPressEvent(QKeyEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+
+    Cell *getCell(int x, int y);
+    LetterCell *getLetterCell(int x, int y);
+    BlackCell *getBlackCell(int x, int y);
+    Cell *getAdjacentCell(Cell *cell, WordDirection direction);
+    Cell *getAdjacentCell(Cell *cell, MoveDirection direction);
+    LetterCell *getAdjacentLetterCell(Cell *cell, MoveDirection direction);
+    BlackCell *getAdjacentBlackCell(Cell *cell, MoveDirection direction);
     LetterCell *getFirstLetter();
-    LetterCell *getNextLetter(LetterCell *cell, Direction direction);
+    LetterCell *getNextLetter(LetterCell *cell, WordDirection direction);
+
+    bool startsWord(LetterCell *cell, WordDirection direction);
+    struct Word parseWord(LetterCell *cell, WordDirection direction, int number);
+    int findWord(int x, int y, WordDirection direction);
+    std::vector<LetterCell *> wordToCells(struct Word &word);
+    void refreshWords();
+    Word &getNextWord(int wordIndex);
+    Word &getPreviousWord(int wordIndex);
+    void printWord(struct Word &word);
+    void printWords();
+
     void toggleCell(Cell *cell, bool symmetric);
-    void switchEditingMode();
-    void handleShortcut(QKeyEvent *event);
+    void switchActiveMode();
     QString toString();
     void fromString(QString newGrid, int newGridSize);
     void saveToFile();
     void loadFromFile();
-    int getSize() const { return size; }
-    void setSize(int newSize) { size = newSize; }
-    int getCellSize() const { return cellSize; }
+
+    /* Getters */
     auto& getCells() { return cells; }
+    int getSize() const { return size; }
+    int getCellSize() const { return cellSize; }
 
-    bool startsWord(LetterCell *cell, Direction direction);
-    struct Word parseWord(LetterCell *cell, Direction direction, int number);
-    int findWord(int x, int y, Direction direction);
-    std::vector<LetterCell *> wordToCells(struct Word &word);
-    void updateWords();
-    void printWord(struct Word &word);
-    void printWords();
+    /* Setters */
+    void setSize(int newSize) { size = newSize; }
 
+    /* Constants for drawing the grid */
     static constexpr int inner_line_width = 1;
     static constexpr int border_line_width = 2;
     static constexpr int letter_font_size = 14;

@@ -7,7 +7,7 @@ struct Word {
     int startX;
     int startY;
     int length;
-    Direction direction;
+    WordDirection direction;
     int clueNumber;
     // TODO
     // QString clue;

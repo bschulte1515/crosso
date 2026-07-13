@@ -25,12 +25,13 @@ Grid::Grid(QWidget *parent, State *stateIn, int g, int c)
     for (int i = 0; i < size; i++) {
         std::vector<Cell*> row;
         for (int j = 0; j < size; j++) {
-            row.push_back(new LetterCell(i, j, cellSize, ' '));
+            row.push_back(new LetterCell(i, j, cellSize, EMPTY_LETTER));
         }
         cells.push_back(row);
     }
-    resetGrid();
 
+    state->setActiveMode(Mode::LAYOUT);
+    state->setActiveDirection(WordDirection::ACROSS);
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
 }
@@ -45,38 +46,33 @@ void Grid::destroyGrid()
     cells.clear();
 }
 
-void Grid::resetGrid()
-{
-    updateWords();
-    LetterCell *firstLetter = getFirstLetter();
-    assert(firstLetter != NULL);
-    state->selectCell(firstLetter);
-}
 
-/**
- * @brief Draw each word (i.e. clue numbers) and highlight selected word/cell
- * @param painter
- */
 void Grid::drawWords(QPainter *painter)
 {
-    LetterCell *selected = state->getSelectedCell();
-    painter->fillRect(selected->toRect(), SELECTED_COLOR);
-    selected->drawLetter(painter, Qt::white); // Replace highlighted letters with white
+    // If we call this draw function, we MUST be in FILL, thus cursor MUST be a letter
+    LetterCell *cursor = dynamic_cast<LetterCell *>(state->getCursor());
+    if (!cursor) return;
 
-    int word_index = findWord(selected->getX(), selected->getY(), state->getFillDirection());
+    // Draw the cursor
+    painter->fillRect(cursor->toRect(), SELECTED_COLOR);
+    cursor->drawLetter(painter, Qt::white);
+
+    // Draw the highlighting for the active word
+    int word_index = findWord(cursor->getX(), cursor->getY(), state->getActiveDirection());
     if (word_index != -1) {
         for (LetterCell *letter : wordToCells(words[word_index])) {
-            if (letter == selected) continue;
+            if (letter == cursor) continue;
             painter->fillRect(letter->toRect(), HIGHLIGHT_COLOR);
             letter->drawLetter(painter, Qt::white); // Replace highlighted letters with white
         }
     }
 
-    // Give a light gray, transparent background to word in other direction
-    word_index = findWord(selected->getX(), selected->getY(), (Direction)!state->getFillDirection());
+    // Give a light gray, transparent background to perpendicular word intersecting the cursor
+    word_index = findWord(cursor->getX(), cursor->getY(),
+                          OPPOSITE_DIRECTION(state->getActiveDirection()));
     if (word_index != -1) {
         for (LetterCell *letter : wordToCells(words[word_index])) {
-            if (letter == selected) continue;
+            if (letter == cursor) continue;
             painter->fillRect(letter->toRect(), PERPENDICULAR_COLOR);
             letter->drawLetter(painter, Qt::black); // Write over letters again
         }
@@ -126,7 +122,7 @@ void Grid::paintEvent(QPaintEvent *event)
     }
 
     // Draw each of the clue numbers/highlight
-    if (state->getEditingMode() == FILL) {
+    if (state->getActiveMode() == Mode::FILL) {
         drawWords(&painter);
     }
 
@@ -154,6 +150,74 @@ void Grid::paintEvent(QPaintEvent *event)
     }
 }
 
+/**
+ * @brief Attempts to get the cell at the given coordinate
+ *
+ * @note Callers do NOT need to do bounds checking prior to calling this function.
+ * 		  The bounds checking is done in this function. They should just check the return
+ *
+ * @param x 	The x coordinate of the cell to return
+ * @param y 	The y coordinate of the cell to return
+ * @return		The cell at the coordinate, or a nullptr if the coordinate is OOB
+ */
+Cell *Grid::getCell(int x, int y)
+{
+    if (x < 0 || x >= size || y < 0 || y >= size) {
+        return nullptr;
+    }
+    return cells[x][y];
+}
+
+LetterCell *Grid::getLetterCell(int x, int y)
+{
+    return dynamic_cast<LetterCell *>(getCell(x, y));
+}
+
+BlackCell *Grid::getBlackCell(int x, int y)
+{
+    return dynamic_cast<BlackCell *>(getCell(x, y));
+}
+
+Cell *Grid::getAdjacentCell(Cell *cell, WordDirection direction)
+{
+    if (direction == WordDirection::ACROSS) {
+        return getAdjacentCell(cell, MoveDirection::RIGHT);
+    } else if (direction == WordDirection::DOWN) {
+        return getAdjacentCell(cell, MoveDirection::DOWN);
+    } else {
+        return nullptr;
+    }
+}
+
+Cell *Grid::getAdjacentCell(Cell *cell, MoveDirection direction)
+{
+    int x = cell->getX();
+    int y = cell->getY();
+
+    switch (direction) {
+    case MoveDirection::UP:
+        return getCell(x, y - 1);
+    case MoveDirection::DOWN:
+        return getCell(x, y + 1);
+    case MoveDirection::LEFT:
+        return getCell(x - 1, y);
+    case MoveDirection::RIGHT:
+        return getCell(x + 1, y);
+    default:
+        return nullptr;
+    }
+}
+
+LetterCell *Grid::getAdjacentLetterCell(Cell *cell, MoveDirection direction)
+{
+    return dynamic_cast<LetterCell *>(getAdjacentCell(cell, direction));
+}
+
+BlackCell *Grid::getAdjacentBlackCell(Cell *cell, MoveDirection direction)
+{
+    return dynamic_cast<BlackCell *>(getAdjacentCell(cell, direction));
+}
+
 void Grid::toggleCell(Cell *cell, bool symmetric)
 {
     bool wasBlack = cell->isBlack();
@@ -176,61 +240,31 @@ void Grid::toggleCell(Cell *cell, bool symmetric)
     }
 }
 
-void Grid::switchEditingMode()
+void Grid::enterLetter(QChar ch)
 {
-    switch(state->getEditingMode()) {
-    case LAYOUT: {
-        state->setEditingMode(FILL);
-        resetGrid();
-        break;
-    }
-    case FILL: {
-        state->setEditingMode(LAYOUT);
-        break;
-    }
-    case CLUES:
-    default:
-        break;
-    }
+    LetterCell *cursor = dynamic_cast<LetterCell *>(state->getCursor());
+    if (!cursor) return;
+
+    cursor->setLetter(ch.toUpper());
+    state->moveCursor(state->getActiveDirection(), false);
 }
 
-void Grid::handleShortcut(QKeyEvent *event)
+void Grid::removeLetter()
 {
-    switch (event->key()) {
-        case Qt::Key_M:
-            switchEditingMode();
-            break;
-        case Qt::Key_S:
-            saveToFile();
-            break;
-        case Qt::Key_L:
-            loadFromFile();
-            break;
-        case Qt::Key_D:
-            state->swapFillDirection();
-            break;
-        default:
-            break;
-    }
-}
+    if (state->getActiveMode() != Mode::FILL) return;
+    LetterCell *cursor = dynamic_cast<LetterCell *>(state->getCursor());
+    if (!cursor) return;
 
-void Grid::mousePressEvent(QMouseEvent *event)
-{
-    if (event->position().x() <= border_line_width || event->position().y() <= border_line_width) return;
-    int x = (event->position().x() - border_line_width) / (cellSize + inner_line_width);
-    int y = (event->position().y() - border_line_width) / (cellSize + inner_line_width);
-    if (x >= size || y >= size) return;
-
-    Cell *cell = cells[x][y];
-
-    if (state->getEditingMode() == LAYOUT) {
-        bool symmetricGrid = true;
-        toggleCell(cell, symmetricGrid);
-    } else {
-        state->selectCell(cell);
+    /* Only move the cursor back if the next cell is also a letter or this cell is empty */
+    if (getNextLetter(cursor, state->getActiveDirection()) ||
+        cursor->getLetter() == EMPTY_LETTER)
+    {
+        state->moveCursor(state->getActiveDirection(), true);
+        cursor = dynamic_cast<LetterCell *>(state->getCursor());
+        if (!cursor) return;
     }
 
-    update();
+    cursor->setLetter(EMPTY_LETTER);
 }
 
 /**
@@ -239,25 +273,47 @@ void Grid::mousePressEvent(QMouseEvent *event)
  */
 void Grid::keyPressEvent(QKeyEvent *event)
 {
-    QString text = event->text();
+    QString text;
+    QChar ch;
 
-    // Process a shortcut
-    if (event->modifiers() & Qt::ControlModifier) {
-        handleShortcut(event);
+    // Pass the event to the State and retrieve the action
+    if (state->keyPressAction(event)) {
         goto exit;
     }
-    // Process a key press when we are filling the grid
-    if (!text.isEmpty() && state->getEditingMode() == FILL) {
-        QChar ch = text.at(0).toUpper();
-        if (ch.isLetter()) {
-            state->getSelectedCell()->setLetter(ch);
-            state->selectCell(
-                getNextLetter(state->getSelectedCell(), state->getFillDirection())
-            );
-        }
+    // If no action was performed, check if the key press was for entering a letter
+    if (state->getActiveMode() != Mode::FILL) {
+        goto exit;
+    }
+    text = event->text();
+    if (text.isEmpty()) {
+        goto exit;
+    }
+    ch = text.at(0);
+    if (ch.isLetter()) {
+        enterLetter(ch);
     }
 
 exit:
+    update();
+}
+
+void Grid::mousePressEvent(QMouseEvent *event)
+{
+    Cell *cell = nullptr;
+    bool symmetricGrid = true;
+
+    if (event->position().x() <= border_line_width || event->position().y() <= border_line_width) return;
+    int x = (event->position().x() - border_line_width) / (cellSize + inner_line_width);
+    int y = (event->position().y() - border_line_width) / (cellSize + inner_line_width);
+    if (x >= size || y >= size) return;
+
+    if (state->getActiveMode() == Mode::LAYOUT) {
+        cell = cells[x][y];
+        toggleCell(cell, symmetricGrid);
+    } else {
+        state->moveCursor(x, y);
+    }
+
     update();
 }
 
@@ -276,16 +332,15 @@ LetterCell *Grid::getFirstLetter()
  * @param direction				 The direction in which to traverse the cells
  * @return 						 The next cell. Set to NULL if traversing would lead to OOB
  */
-LetterCell *Grid::getNextLetter(LetterCell *cell, Direction direction)
+LetterCell *Grid::getNextLetter(LetterCell *cell, WordDirection direction)
 {
-    int oldX = cell->getX();
-    int oldY = cell->getY();
-    int deltaX = (direction == ACROSS &&
-                  !(oldX == size - 1)) ? 1 : 0;
-    int deltaY = (direction == DOWN &&
-                  !(oldY == size - 1)) ? 1 : 0;
-    if (deltaX == 0 && deltaY == 0) return NULL;
-    return dynamic_cast<LetterCell *>(cells[oldX + deltaX][oldY + deltaY]);
+    if (direction == WordDirection::ACROSS) {
+        return getAdjacentLetterCell(cell, MoveDirection::RIGHT);
+    } else if (direction == WordDirection::DOWN) {
+        return getAdjacentLetterCell(cell, MoveDirection::DOWN);
+    } else {
+        return nullptr;
+    }
 }
 
 QString Grid::toString()
@@ -333,7 +388,8 @@ void Grid::fromString(QString newGrid, int newSize)
         ((size + 1) * inner_line_width) + (2 * border_line_width) + (size * cellSize));
 
     emit gridResized();
-    resetGrid();
+
+    state->setActiveMode(Mode::LAYOUT);
     update();
 }
 
@@ -383,26 +439,24 @@ void Grid::loadFromFile()
     int size = items[0].toInt(&ok);
     if (!ok) return;
     this->fromString(items[1], size);
-    resetGrid();
 }
 
 /**
- * @brief Grid::startsWord		Helper function that checks if this cell should be the start of a word
+ * @brief Helper function that checks if this cell should be the start of a word
+ *
  * @param cell 					The cell to check
  * @param direction 			The direction to check
  * @return						Whether the cell is the start of a word in the direction given
  */
-bool Grid::startsWord(LetterCell *cell, Direction direction)
+bool Grid::startsWord(LetterCell *cell, WordDirection direction)
 {
-    if (direction == ACROSS) {
+    if (direction == WordDirection::ACROSS) {
         if (cell->getX() == 0) return true;
-        Cell *cellLeft = cells[cell->getX()-1][cell->getY()];
-        if (cellLeft->isBlack()) return true;
+        if (getAdjacentBlackCell(cell, MoveDirection::LEFT) != nullptr) return true;
     }
-    else if (direction == DOWN) {
+    else if (direction == WordDirection::DOWN) {
         if (cell->getY() == 0) return true;
-        Cell *cellAbove = cells[cell->getX()][cell->getY()-1];
-        if (cellAbove->isBlack()) return true;
+        if (getAdjacentBlackCell(cell, MoveDirection::UP) != nullptr) return true;
     }
     return false;
 }
@@ -415,7 +469,7 @@ bool Grid::startsWord(LetterCell *cell, Direction direction)
  * @param number
  * @return
  */
-struct Word Grid::parseWord(LetterCell *cell, Direction direction, int number)
+struct Word Grid::parseWord(LetterCell *cell, WordDirection direction, int number)
 {
     struct Word newWord = {
         .startX = cell->getX(),
@@ -433,20 +487,34 @@ struct Word Grid::parseWord(LetterCell *cell, Direction direction, int number)
     return newWord;
 }
 
-int Grid::findWord(int x, int y, Direction direction)
+/**
+ * @brief Attempts to find a word that has the given coorindate and direction
+ *
+ * @param x				The x-coordinate of the word to find
+ * @param y    		    The y-coordinate of the word to find
+ * @param direction     The direction of the word to find
+ * @return				The index of the word or -1 if the word was not found
+ */
+int Grid::findWord(int x, int y, WordDirection direction)
 {
+    Word currentWord;
+
     for (unsigned int i = 0; i < words.size(); i++) {
-        auto &word = words[i];
-        if (direction == ACROSS && word.direction == ACROSS &&
-           word.startX <= x &&
-           x <= (word.startX + word.length - 1) &&
-           word.startY == y) {
+        currentWord = words[i];
+        if (direction == WordDirection::ACROSS &&
+            currentWord.direction == WordDirection::ACROSS &&
+            currentWord.startX <= x &&
+            x <= (currentWord.startX + currentWord.length - 1) &&
+            currentWord.startY == y)
+        {
             return i;
         }
-        else if (direction == DOWN && word.direction == DOWN &&
-                word.startY <= y &&
-                y <= (word.startY + word.length - 1) &&
-                word.startX == x) {
+        else if (direction == WordDirection::DOWN &&
+                 currentWord.direction == WordDirection::DOWN &&
+                 currentWord.startY <= y &&
+                 y <= (currentWord.startY + currentWord.length - 1) &&
+                 currentWord.startX == x)
+        {
             return i;
         }
     }
@@ -469,13 +537,7 @@ std::vector<LetterCell *> Grid::wordToCells(struct Word &word)
     return wordAsVector;
 }
 
-/**
- * @brief Grid::updateWords      Parses the grid into words, first across then down
- *
- * Called everytime there is an update to the grid. For right now this should only be when switching
- * from LAYOUT -> FILL mode, or after initalizing the grid (regularly or fromString)
- */
-void Grid::updateWords()
+void Grid::refreshWords()
 {
     int clueNumber = 1;
     bool wordParsed = false;
@@ -488,12 +550,12 @@ void Grid::updateWords()
             if (cell->isBlack()) continue;
             letter = dynamic_cast<LetterCell *>(cell);
             wordParsed = false;
-            if (letter && startsWord(letter, ACROSS)) {
-                words.push_back(parseWord(letter, ACROSS, clueNumber));
+            if (letter && startsWord(letter, WordDirection::ACROSS)) {
+                words.push_back(parseWord(letter, WordDirection::ACROSS, clueNumber));
                 wordParsed = true;
             }
-            if (letter && startsWord(letter, DOWN)) {
-                words.push_back(parseWord(letter, DOWN, clueNumber));
+            if (letter && startsWord(letter, WordDirection::DOWN)) {
+                words.push_back(parseWord(letter, WordDirection::DOWN, clueNumber));
                 wordParsed = true;
             }
             if (wordParsed) clueNumber++;
@@ -501,26 +563,80 @@ void Grid::updateWords()
     }
 }
 
+Word &Grid::getNextWord(int wordIndex)
+{
+    Word currentWord = words[wordIndex];
+
+    /* Try each index in the words vector to see if it is next word */
+    for (size_t i = 1; i < words.size(); i++) {
+        currentWord = words[(i + wordIndex) % words.size()];
+        if (currentWord.direction == words[wordIndex].direction) {
+            return words[(i + wordIndex) % words.size()];
+        }
+    }
+    return words[wordIndex];
+}
+
+Word &Grid::getPreviousWord(int wordIndex)
+{
+    Word currentWord = words[wordIndex];
+    int i = wordIndex - 1;
+
+    /* Try each index in the words vector to see if it is previous word */
+    while (i != wordIndex) {
+        if (i < 0) {
+            i = words.size() - 1;
+        }
+        currentWord = words[i];
+        if (currentWord.direction == words[wordIndex].direction) {
+            return words[i];
+        }
+        i--;
+    }
+    return words[wordIndex];
+}
+
 void Grid::printWord(struct Word &word)
 {
-    std::cout << "(" << word.startX << ", " << word.startY << ") -> (";
+    QChar ch;
+    for (auto &cell : wordToCells(word)) {
+        ch = cell->getLetter();
+        if (ch == (QChar)EMPTY_LETTER) {
+            std::cout << '_';
+        } else {
+            std::cout << ch.toLatin1();
+        }
+    }
+    std::cout << " (" << word.startX << ", " << word.startY << ") -> (";
     int newX = word.startX;
     int newY = word.startY;
-    if (word.direction == ACROSS) {
+    if (word.direction == WordDirection::ACROSS) {
         newX += word.length;
         newX--;
     }
-    if (word.direction == DOWN) {
+    if (word.direction == WordDirection::DOWN) {
         newY += word.length;
         newY--;
     }
-    std::cout << newX << ", " << newY << ")" << std::endl;
+    std::cout << newX << ", " << newY << ")";
+    if (word.direction == WordDirection::ACROSS) {
+        std::cout << " [ACROSS]" << std::endl;
+    }
+    if (word.direction == WordDirection::DOWN) {
+        std::cout << " [DOWN]" << std::endl;
+    }
 }
 
 void Grid::printWords()
 {
+    int index = 0;
+
+    std::cout << "===============================" << std::endl;
     std::cout << "Words:" << std::endl;
     for (auto &word : words) {
+        std::cout << "[" << index << "] ";
         printWord(word);
+        index++;
     }
+    std::cout << "===============================" << std::endl;
 }
