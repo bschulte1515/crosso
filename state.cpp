@@ -13,8 +13,8 @@ State::State()
     keymap_no_mod[Qt::Key_Right] = Action::GRID_MOVE_RIGHT;
     keymap_no_mod[Qt::Key_Backspace] = Action::GRID_REMOVE_LETTER;
 
-    keymap_ctrl_mod[Qt::Key_Left] = Action::GRID_GOTO_NEXT_WORD;
-    keymap_ctrl_mod[Qt::Key_Right] = Action::GRID_GOTO_PREVIOUS_WORD;
+    keymap_ctrl_mod[Qt::Key_Right] = Action::GRID_GOTO_NEXT_WORD;
+    keymap_ctrl_mod[Qt::Key_Left] = Action::GRID_GOTO_PREVIOUS_WORD;
     keymap_ctrl_mod[Qt::Key_M] = Action::STATE_SWITCH_MODE;
     keymap_ctrl_mod[Qt::Key_D] = Action::STATE_TOGGLE_ACTIVE_DIRECTION;
     keymap_ctrl_mod[Qt::Key_S] = Action::SAVE_TO_FILE;
@@ -157,14 +157,18 @@ void State::moveCursor(int x, int y)
 
 void State::moveCursorToNextWord()
 {
+    if (activeMode != Mode::FILL) return;
     int wordIndex = getActiveWord();
-
-    // Loop through the words and find the next word in the same direction
+    Word &word = grid->getNextWord(wordIndex);
+    moveCursor(word.startX, word.startY);
 }
 
 void State::moveCursorToPreviousWord()
 {
+    if (activeMode != Mode::FILL) return;
     int wordIndex = getActiveWord();
+    Word &word = grid->getPreviousWord(wordIndex);
+    moveCursor(word.startX, word.startY);
 }
 
 void State::toggleActiveDirection()

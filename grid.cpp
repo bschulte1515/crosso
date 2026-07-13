@@ -497,20 +497,24 @@ struct Word Grid::parseWord(LetterCell *cell, WordDirection direction, int numbe
  */
 int Grid::findWord(int x, int y, WordDirection direction)
 {
+    Word currentWord;
+
     for (unsigned int i = 0; i < words.size(); i++) {
-        auto &word = words[i];
+        currentWord = words[i];
         if (direction == WordDirection::ACROSS &&
-           word.direction == WordDirection::ACROSS &&
-           word.startX <= x &&
-           x <= (word.startX + word.length - 1) &&
-           word.startY == y) {
+            currentWord.direction == WordDirection::ACROSS &&
+            currentWord.startX <= x &&
+            x <= (currentWord.startX + currentWord.length - 1) &&
+            currentWord.startY == y)
+        {
             return i;
         }
         else if (direction == WordDirection::DOWN &&
-                word.direction == WordDirection::DOWN &&
-                word.startY <= y &&
-                y <= (word.startY + word.length - 1) &&
-                word.startX == x) {
+                 currentWord.direction == WordDirection::DOWN &&
+                 currentWord.startY <= y &&
+                 y <= (currentWord.startY + currentWord.length - 1) &&
+                 currentWord.startX == x)
+        {
             return i;
         }
     }
@@ -561,34 +565,35 @@ void Grid::refreshWords()
 
 Word &Grid::getNextWord(int wordIndex)
 {
-    Word &word = words[wordIndex];
-    Word &currentWord = word;
+    Word currentWord = words[wordIndex];
 
     /* Try each index in the words vector to see if it is next word */
     for (size_t i = 1; i < words.size(); i++) {
         currentWord = words[(i + wordIndex) % words.size()];
-        if (currentWord.direction == word.direction) {
-            return currentWord;
+        if (currentWord.direction == words[wordIndex].direction) {
+            return words[(i + wordIndex) % words.size()];
         }
     }
-    return word;
+    return words[wordIndex];
 }
 
 Word &Grid::getPreviousWord(int wordIndex)
 {
-    Word &word = words[wordIndex];
-    Word &currentWord = word;
-    int i = 0;
+    Word currentWord = words[wordIndex];
+    int i = wordIndex - 1;
 
     /* Try each index in the words vector to see if it is previous word */
-    i = wordIndex;
-    while (true) {
-        currentWord = words[(i + wordIndex) % words.size()];
-        if (currentWord.direction == word.direction) {
-            return currentWord;
+    while (i != wordIndex) {
+        if (i < 0) {
+            i = words.size() - 1;
         }
+        currentWord = words[i];
+        if (currentWord.direction == words[wordIndex].direction) {
+            return words[i];
+        }
+        i--;
     }
-    return word;
+    return words[wordIndex];
 }
 
 void Grid::printWord(struct Word &word)
@@ -597,7 +602,7 @@ void Grid::printWord(struct Word &word)
     for (auto &cell : wordToCells(word)) {
         ch = cell->getLetter();
         if (ch == (QChar)EMPTY_LETTER) {
-            std::cout << EMPTY_LETTER;
+            std::cout << '_';
         } else {
             std::cout << ch.toLatin1();
         }
@@ -624,8 +629,14 @@ void Grid::printWord(struct Word &word)
 
 void Grid::printWords()
 {
+    int index = 0;
+
+    std::cout << "===============================" << std::endl;
     std::cout << "Words:" << std::endl;
     for (auto &word : words) {
+        std::cout << "[" << index << "] ";
         printWord(word);
+        index++;
     }
+    std::cout << "===============================" << std::endl;
 }
